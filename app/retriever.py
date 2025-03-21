@@ -5,6 +5,12 @@ from langchain_ollama import OllamaEmbeddings
 def retrieve_chunks(query):
     """
     When sending in the prompt, the system should return the most relevant text chunks from the vector database.
+
+    Parameters:
+    query (str): The query for the vector store
+
+    Returns:
+    list: The most relevant text chunks
     """
     # Instantiate the OllamaEmbeddings model
     embedding_function = OllamaEmbeddings(model="llama3.2")
@@ -19,6 +25,3 @@ def retrieve_chunks(query):
     chunks = vector_store.similarity_search(query, k=3) #TODO: how many chunks to retrieve?
     # print(f"""Retrieved {chunks} chunks""")
     return chunks
-
-
-#TODO: not retrieving any chunks --> need to find way to see what is stored in database

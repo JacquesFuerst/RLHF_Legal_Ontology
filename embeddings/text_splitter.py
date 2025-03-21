@@ -7,6 +7,12 @@ from langchain.document_loaders import PyPDFLoader
 def split_text(file_path):
     """
     Split text used in the RAG into chunks. load text based on document type (PDF/txt).
+
+    Parameters:
+    file_path (str): The path to the document
+
+    Returns:
+    list: The chunks of text
     """
     loader = PyPDFLoader(file_path)
     documents = loader.load()

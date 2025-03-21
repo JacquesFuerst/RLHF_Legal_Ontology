@@ -3,6 +3,17 @@ from langchain.schema import Document
 from tqdm import tqdm
 
 def extract_text(file_path):
+        """
+        
+        Extract the text from a PDF file.
+        
+        Parameters:
+        file_path (str): The path to the PDF file
+        
+        Returns:
+        list: List of Document objects with the extracted text and metadata (the corresponding page number in the original document)
+        """
+
         documents = []
         with fitz.open(file_path) as doc:
             for page_num, page in enumerate(tqdm(doc, desc="Extracting text"), start=1):

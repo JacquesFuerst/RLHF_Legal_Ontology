@@ -1,7 +1,3 @@
-
-#TODO: is storing the embeddings the right thing to do here? Maybe do in other file...
-
-
 from embeddings.vector_store import store_embeddings
 from embeddings.data_extraction import extract_text
 

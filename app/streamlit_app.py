@@ -17,7 +17,7 @@ query = st.text_input("Please enter the act for which you would like to retrieve
 
 if query:
     response, prompt = get_rag_response(query)
-    st.write("You asked:")
+    st.write("Input context window:")
     st.write(prompt)
     st.write("Response:")
     st.write(response)
