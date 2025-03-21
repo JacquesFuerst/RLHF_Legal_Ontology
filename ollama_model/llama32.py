@@ -7,3 +7,6 @@ def load_llm():
         model="llama3.2",
         language="en")
     return model
+
+def return_model_name():
+    return "llama3.2_v1"
