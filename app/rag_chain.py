@@ -7,19 +7,14 @@ def generate_prompt(query, context):
         Generate the prompt for the RAG based on the query. For now, this is a format for the toy data.
         """
 
-        ############## for toy data only #################
-
-        #input format: event, sentence
-        event, sentence = query.split(',', 1)
-
-        ##################################################
+        # in the sentence: \n {sentence} 
 
         prompt = f"""
 
-                Use the follwoing context to answer: \n {context} \n \n 
+                Use the following context to answer: \n {context} \n \n 
                 
-                Query: Find the precondition (a single verb in the sentence) to the following event {event} 
-                in the sentence: \n {sentence} \n \n
+                Query: Find the precondition (a single verb in the sentence) to the following event {query} 
+                \n \n
 
                 Provide the answer in the follwoing format: \n
                 According to the document on page <page number>, line <line number>, the precondition is: \n
@@ -53,7 +48,10 @@ def get_rag_response(query): #TODO: add prompt tas argument, pass before
         """
         llm = load_llm()
         retrieved_chunks = retrieve_chunks(query)
-        context = "\n".join([chunk.page_content for chunk in retrieved_chunks])# extracts chunk_page content attribute from each chunk
+        
+        # extract chunk_page content attribute from each chunk
+        context = "\n".join([f"Page {chunk.metadata['page_number']}: {chunk.page_content}" for chunk in retrieved_chunks])
+
         #TODO: use chain.invoke here later
 
         prompt = generate_prompt(query, context)

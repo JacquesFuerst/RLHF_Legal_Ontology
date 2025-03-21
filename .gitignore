@@ -12,6 +12,6 @@ vector_db/*
 # ignore pycache files
 __pycache__/
 
-#ignore environmetn settings
+#ignore environment settings
 .env
 
