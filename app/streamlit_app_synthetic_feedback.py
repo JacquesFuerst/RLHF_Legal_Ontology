@@ -19,11 +19,13 @@ query = st.text_input("Please enter the act for which you would like to retrieve
 ground_truth = st.text_input("Please enter the act's ground truth:")
 
 if query and ground_truth:
-    response, prompt = get_rag_response_and_collect_feedback(query, ground_truth)
+    response, context, feedback = get_rag_response_and_collect_feedback(query, ground_truth)
     st.write("Input context window:")
-    st.write(prompt)
-    st.write("Response:")
+    st.write(context)
+    st.write("RAG response:")
     st.write(response)
+    st.write("Feedback:")
+    st.write(feedback)
 
 
 

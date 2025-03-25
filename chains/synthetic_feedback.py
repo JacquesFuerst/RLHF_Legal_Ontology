@@ -4,7 +4,6 @@ from ollama_model.llama32 import load_llm, return_model_name
 import re
 
 
-
 def jaccard_distance_strings(str1, str2):
     """
     Calculate the Jaccard distance between two strings.
@@ -88,10 +87,18 @@ def generate_feedback_prompt(response, context, ground_truth):
 
 #TODO: maybe return feedback for each precondition? No, need to compare proper part of ground truth with proper preconditions
 
+
+
+
+
+#TODO: need to define this as an actual chain, not a function, HOW?
 def feedback_chain(inputs):
     response = inputs["response"]
     context = inputs["context"]
     ground_truth = inputs["ground_truth"]
+
+    # print("response: ", response)
+    # print("context: ", context)
 
     preconditions = extract_preconditions(response)
 
@@ -108,8 +115,8 @@ def feedback_chain(inputs):
         feedback_prompt = generate_feedback_prompt(response, context, ground_truth)
         feedback = feedback_llm.invoke(feedback_prompt)
     
-    # Store feedback in session state
-    st.session_state.feedback = feedback
+    # # Store feedback in session state
+    # st.session_state.feedback = feedback
     
     return {"feedback": feedback}
 

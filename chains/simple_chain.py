@@ -98,4 +98,6 @@ def get_rag_response(query):
 
         prompt = generate_prompt(query, context)
         response = llm.invoke(prompt)
+
+        print("response: ", response)
         return response, retrieved_chunks
