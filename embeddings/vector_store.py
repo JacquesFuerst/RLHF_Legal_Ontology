@@ -13,5 +13,5 @@ def store_embeddings(chunks):
     Returns:
     None
     """
-    embeddings = OllamaEmbeddings(model="llama3.2") #TODO: use llama to create the embeddings for now, maybe switch language model
+    embeddings = OllamaEmbeddings(model="nomic-embed-text") #TODO: use llama to create the embeddings for now, maybe switch language model
     vector_store = Chroma.from_documents(chunks, embeddings, persist_directory="./vector_db")

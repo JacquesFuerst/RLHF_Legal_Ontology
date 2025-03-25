@@ -13,15 +13,26 @@ def retrieve_chunks(query):
     list: The most relevant text chunks
     """
     # Instantiate the OllamaEmbeddings model
-    embedding_function = OllamaEmbeddings(model="llama3.2")
+    embedding_function = OllamaEmbeddings(model="nomic-embed-text")
     vector_store = Chroma(persist_directory="./vector_db", 
                           embedding_function=embedding_function)
     
     # Get the total number of documents in the vector store
-    # total_documents = vector_store._collection.count()
+    total_documents = vector_store._collection.count()
     # print(f"Total documents in vector store: {total_documents}")
 
+    # Generate query embedding
+    query_embedding = embedding_function.embed_query(text=query)
+    # print(f"Query embedding: {query_embedding}")
+
+    # Retrieve chunks
+    chunks = vector_store.similarity_search_with_score(query=query, k=3)
+    # print(f"Retrieved {len(chunks)} chunks")
     
-    chunks = vector_store.similarity_search(query, k=3) #TODO: how many chunks to retrieve?
-    # print(f"""Retrieved {chunks} chunks""")
+    # # Debugging: Print retrieved chunks
+    # for i, chunk in enumerate(chunks):
+    #     print(f"Chunk {i+1}: {chunk}")
+
+    #TODO: print similarity scores for documents to get insight into the retrieval process
+
     return chunks
