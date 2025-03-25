@@ -10,24 +10,8 @@ import streamlit as st
 import uuid
 
 
-# Check if the unique identifier is already in session state
-if 'unique_id' not in st.session_state:
-    st.session_state.unique_id = str(uuid.uuid4())
 
-# Access the unique identifier
-unique_id = st.session_state.unique_id
-
-
-
-# Load the JSON file
-data = read_json('C:/Users/furstj/development/RAG/data/querys_and_responses/query_data.json')
-
-
-# Initialize session state
-if 'current_index' not in st.session_state:
-    st.session_state.current_index = 0
-if 'consent_given' not in st.session_state:
-    st.session_state.consent_given = False
+############## Helper functions ###################
 
 # Function to handle consent submission
 def submit_consent():
@@ -40,6 +24,28 @@ def submit_feedback(feedback_1, feedback_2):
     data[current_index]['feedback_2'] = feedback_2
     add_to_json(f'C:/Users/furstj/development/RAG/data/human_feedback/questions_{unique_id}.json', data[current_index])
     st.session_state.current_index += 1
+
+
+##################################################
+
+
+# Check if the unique identifier is already in session state
+if 'unique_id' not in st.session_state:
+    st.session_state.unique_id = str(uuid.uuid4())
+
+# Access the unique identifier
+unique_id = st.session_state.unique_id
+
+
+# Load the JSON file
+data = read_json('C:/Users/furstj/development/RAG/data/querys_and_responses/query_data.json')
+
+
+# Initialize session state
+if 'current_index' not in st.session_state:
+    st.session_state.current_index = 0
+if 'consent_given' not in st.session_state:
+    st.session_state.consent_given = False
 
 # Display the consent text and button if consent has not been given
 if not st.session_state.consent_given:
@@ -76,12 +82,12 @@ else:
 
         # Create Likert scales for feedback
         feedback_1 = st.radio(
-            "How satisfied are you with this answer?",
+            "How well were the preconditions extracted?",
             ("Very dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very satisfied")
         )
 
         feedback_2 = st.radio(
-            "How clear was the answer?",
+            "How clear is the position in the text the model pointed to?",
             ("Very unclear", "Unclear", "Neutral", "Clear", "Very clear")
         )
 

@@ -147,6 +147,6 @@ def store_feedback(query, context, response, feedback):
         }
     }
     
-    with open("C:/Users/furstj/development/RAG/data/feedback/synthetic_feedback.json", "a") as f:
+    with open(f"C:/Users/furstj/development/RAG/data/synthetic_feedback/synthetic_feedback.json", "a") as f:
         json.dump(data, f)
         f.write("\n")
