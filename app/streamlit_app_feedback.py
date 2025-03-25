@@ -9,8 +9,13 @@ from app.json_handling import add_to_json, read_json
 import streamlit as st
 import uuid
 
-# Generate a random UUID
-unique_id = uuid.uuid4()
+
+# Check if the unique identifier is already in session state
+if 'unique_id' not in st.session_state:
+    st.session_state.unique_id = str(uuid.uuid4())
+
+# Access the unique identifier
+unique_id = st.session_state.unique_id
 
 
 
