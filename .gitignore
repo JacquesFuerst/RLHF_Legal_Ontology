@@ -1,8 +1,5 @@
 # Ignore everything in the data folder except .gitkeep
-data/ground_truth/*
-!data/ground_truth/.gitkeep
-data/text/*
-!data/text/.gitkeep
+data/*
 !data/.gitkeep
 
 # Ignore everything in the vector_db folder except .gitkeep
