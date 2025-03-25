@@ -1,5 +1,4 @@
-import json
-from datetime import datetime
+import streamlit as st
 from ollama_model.llama32 import load_llm, return_model_name
 
 import re
@@ -76,77 +75,80 @@ def generate_feedback_prompt(response, context, ground_truth):
         return feedback_prompt
 
 
-def feedback_chain(response, context, ground_truth):
-        """
-        Return a feedback prompt for the response based on the context and ground truth. 
-        Give an automatic reject if the response is too far from the ground truth (by Jaccard distance).
 
-        Parameters:
-        response (str): The response to evaluate
-        context (str): The context in which the response was generated
-        ground_truth (str): The ground truth response
 
-        Returns:
-        str: The response to evaluate
-        str: The context of the response
-        str: The feedback for the response
-        """
+#TODO: potentially use other llm here, set this up after meeting with Mike...
 
-        #TODO: potentially use other llm here, set this up after meeting with Mike...
+#TODO: somehow give feedback on the page number and line number as well, maybe use the metadata for this
 
-        #TODO: somehow give feedback on the page number and line number as well, maybe use the metadata for this
+#TODO: is token-level accuracy needed here?
 
-        #TODO: is token-level accuracy needed here?
+#TODO: have list of preconditions for now, check with FLINT data what the actual precondition format is
 
-        #TODO: have list of preconditions for now, check with FLINT data what the actual precondition format is
-        
 
-        #TODO: maybe return feedback for each precondition? No, need to compare proper part of ground truth with proper preconditions
+#TODO: maybe return feedback for each precondition? No, need to compare proper part of ground truth with proper preconditions
 
-        precondtions = extract_preconditions(response)
+def feedback_chain(inputs):
+    response = inputs["response"]
+    context = inputs["context"]
+    ground_truth = inputs["ground_truth"]
 
-        # if the response is too far away from the ground truth, reject it
+    preconditions = extract_preconditions(response)
 
-        for precondition in precondtions:
-            if jaccard_distance_strings(precondition, ground_truth) < 0.5:
-                feedback = "Feedback: Reject"
-                return feedback
-        if jaccard_distance_strings(response, ground_truth) < 0.5:
+    for precondition in preconditions:
+        if jaccard_distance_strings(precondition, ground_truth) < 0.5:
             feedback = "Feedback: Reject"
-        else:
-            feedback_llm = load_llm()
-            feedback_prompt = generate_feedback_prompt(response, context, ground_truth)
-            feedback = feedback_llm.invoke(feedback_prompt)
-
-        return response, context, feedback
-
-
-
-def store_feedback(query, context, response, feedback):
-    """
-    Store the feedback data in a JSON file.
-
-    Parameters:
-    query (str): The query used to retrieve the chunks
-    context (str): The context of the response
-    response (str): The response to evaluate
-    feedback (str): The feedback for the response
-
-    Returns:
-    None
-    """
-    data = {
-        "query": query,
-        "context": context,
-        "response": response,
-        "feedback": feedback,
-        "metadata": {
-            "timestamp": datetime.now().isoformat(),
-            "model_version": return_model_name(),
-            "feedback_model_version": return_model_name()
-        }
-    }
+            st.session_state.feedback = feedback
+            return {"feedback": feedback}
     
-    with open(f"C:/Users/furstj/development/RAG/data/synthetic_feedback/synthetic_feedback.json", "a") as f:
-        json.dump(data, f)
-        f.write("\n")
+    if jaccard_distance_strings(response, ground_truth) < 0.5:
+        feedback = "Feedback: Reject"
+    else:
+        feedback_llm = load_llm()
+        feedback_prompt = generate_feedback_prompt(response, context, ground_truth)
+        feedback = feedback_llm.invoke(feedback_prompt)
+    
+    # Store feedback in session state
+    st.session_state.feedback = feedback
+    
+    return {"feedback": feedback}
+
+
+
+
+
+
+
+
+
+
+
+
+# def store_feedback(query, context, response, feedback):
+#     """
+#     Store the feedback data in a JSON file.
+
+#     Parameters:
+#     query (str): The query used to retrieve the chunks
+#     context (str): The context of the response
+#     response (str): The response to evaluate
+#     feedback (str): The feedback for the response
+
+#     Returns:
+#     None
+#     """
+#     data = {
+#         "query": query,
+#         "context": context,
+#         "response": response,
+#         "feedback": feedback,
+#         "metadata": {
+#             "timestamp": datetime.now().isoformat(),
+#             "model_version": return_model_name(),
+#             "feedback_model_version": return_model_name()
+#         }
+#     }
+    
+#     with open(f"C:/Users/furstj/development/RAG/data/synthetic_feedback/synthetic_feedback.json", "a") as f:
+#         json.dump(data, f)
+#         f.write("\n")
