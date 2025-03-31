@@ -29,9 +29,8 @@ def generate_prompt(query, context):
 
                 --- Definition ---
 
-                A precondition is a single verb that precedes and causes the event in time. 
-                It is always part of the same sentence as the event, but not of the event itself.
-
+                Precondition: A precondition is a single verb that precedes and causes the event in time. It is always part of the same sentence as the event, but not of the event itself.
+                Event: An event is a single verb that describes an action or occurrence.
                 --- Examples ---
 
                 Example 1: 

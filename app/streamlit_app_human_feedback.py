@@ -5,9 +5,15 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-from app.json_handling import add_to_json, read_json
+from app.json_handling import read_json
 import streamlit as st
 import uuid
+
+
+import csv
+import os
+
+
 
 
 
@@ -17,12 +23,31 @@ import uuid
 def submit_consent():
     st.session_state.consent_given = True
 
+
+
 # Function to handle feedback submission
 def submit_feedback(feedback_1, feedback_2):
     current_index = st.session_state.current_index
-    data[current_index]['feedback_1'] = feedback_1
-    data[current_index]['feedback_2'] = feedback_2
-    add_to_json(f'C:/Users/furstj/development/RAG/data/human_feedback/questions_{unique_id}.json', data[current_index])
+    data[current_index]['feedback_extraction'] = feedback_1
+    data[current_index]['feedback_detection'] = feedback_2
+    
+    # Define the CSV file path
+    csv_file_path = f'C:/Users/furstj/development/RAG/data/human_feedback/queries_{unique_id}.csv'
+    
+    # Check if the CSV file already exists
+    file_exists = os.path.isfile(csv_file_path)
+    
+    # Open the CSV file in append mode
+    with open(csv_file_path, mode='a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=data[current_index].keys(), delimiter=';')
+        
+        # Write the header only if the file does not exist
+        if not file_exists:
+            writer.writeheader()
+        
+        # Write the data
+        writer.writerow(data[current_index])
+    
     st.session_state.current_index += 1
 
 
@@ -73,11 +98,11 @@ else:
     # Get the current question and answer
     current_index = st.session_state.current_index
     if current_index < len(data):
-        question = data[current_index].get('question')
+        question = data[current_index].get('query')
         answer = data[current_index].get('answer')
 
         # Display the question and answer
-        st.write(f"**Question:** {question}")
+        st.write(f"**Query:** {question}")
         st.write(f"**Answer:** {answer}")
 
         # Create Likert scales for feedback

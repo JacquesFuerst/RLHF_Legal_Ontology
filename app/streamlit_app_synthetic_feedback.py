@@ -14,9 +14,9 @@ st.title("RAG system for information extraction")
 
 query = st.text_input("Please enter the act for which you would like to retrieve preconditions here:")
 
-#TODO: think about how to pass ground truth to the feedback_chain --> 
-
 ground_truth = st.text_input("Please enter the act's ground truth:")
+
+#TODO: maybe add buttn
 
 if query and ground_truth:
     response, context, feedback = get_rag_response_and_collect_feedback(query, ground_truth)
