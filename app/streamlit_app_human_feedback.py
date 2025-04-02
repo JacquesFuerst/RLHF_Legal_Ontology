@@ -8,63 +8,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.json_handling import read_json
 import streamlit as st
 import uuid
+from datetime import datetime
+
+from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback, create_pdf
 
 
-import csv
-import os
-
-
-
-
-
-############## Helper functions ###################
-
-# Function to handle consent submission
-def submit_consent():
-    st.session_state.consent_given = True
-
-
-
-# Function to handle feedback submission
-def submit_feedback(feedback_1, feedback_2):
-    current_index = st.session_state.current_index
-    data[current_index]['feedback_extraction'] = feedback_1
-    data[current_index]['feedback_detection'] = feedback_2
-    
-    # Define the CSV file path
-    csv_file_path = f'C:/Users/furstj/development/RAG/data/human_feedback/queries_{unique_id}.csv'
-    
-    # Check if the CSV file already exists
-    file_exists = os.path.isfile(csv_file_path)
-    
-    # Open the CSV file in append mode
-    with open(csv_file_path, mode='a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=data[current_index].keys(), delimiter=';')
-        
-        # Write the header only if the file does not exist
-        if not file_exists:
-            writer.writeheader()
-        
-        # Write the data
-        writer.writerow(data[current_index])
-    
-    st.session_state.current_index += 1
-
-
-##################################################
-
+##################### Streamlit app session states #########################
 
 # Check if the unique identifier is already in session state
 if 'unique_id' not in st.session_state:
     st.session_state.unique_id = str(uuid.uuid4())
 
-# Access the unique identifier
-unique_id = st.session_state.unique_id
-
-
-# Load the JSON file
-data = read_json('C:/Users/furstj/development/RAG/data/querys_and_responses/query_data.json')
-
+# Initialize session state
+if 'page' not in st.session_state:
+    st.session_state.page = 1
 
 # Initialize session state
 if 'current_index' not in st.session_state:
@@ -72,28 +29,182 @@ if 'current_index' not in st.session_state:
 if 'consent_given' not in st.session_state:
     st.session_state.consent_given = False
 
+##############################################################################
+
+
+
+############### Variables used on the page #######################
+
+# Access the unique identifier
+unique_id = st.session_state.unique_id
+
+# Define current date
+current_date = datetime.now().strftime("%d-%m-%Y")
+
+# Define the number of prompt-answer pairs the user needs to fill in
+number_of_pairs = 50 #TODO: define as actual number of pairs
+
+
+# Load the JSON file
+data = read_json('C:/Users/furstj/development/RAG/data/querys_and_responses/query_data.json')
+
+
+informed_consent_text = f"""
+            
+            ### **Informed Consent:**
+                    
+            
+            By proceeding with this study, I acknowledge that I have read and understood the study information dated {current_date}, 
+            or it has been read to me. I have been able to ask questions about the study and my questions have been answered to my satisfaction.
+
+            I consent voluntarily to be a participant in this study and understand that I can refuse to answer questions 
+            and I can withdraw from the study at any time, without having to give a reason.
+
+            I understand that taking part in the study involves rating LLM responses to legal queries.
+
+            I understand that information I provide will be used for research purposes only and will be treated confidentially.
+
+            I understand that personal information collected about me that can identify me, such as (e.g. my name or where I live), 
+            will not be shared beyond the study team.
+
+            I give permission for the feedback data that I provide to be archived in [name of data repository] 
+            so it can be used for future research and learning.
+            \n\n\n
+
+            """
+
+
+study_information_text = f"""
+                    
+                ### **General Information:**
+                
+                **Study Title:** Reinforcement Learning from Human Feedback for legal ontology information extraction
+
+                **Researcher:** Jacques Fürst, KTH - Royal Institute of Technology
+                
+                **Date**: {current_date}
+
+                ### **Purpose of the Study:** 
+                
+                You are invited to participate in a research study about Language Model performance in extracting information from Dutch legal documents. 
+                Your participation will help to train the language model at hand from your feedback.
+
+                ### **Procedures:** 
+                
+                If you agree to participate, you will be shown {number_of_pairs} pairs of an action and its correprecondtion precondition(s).
+
+                DEFINITION OF AN ACTION IN A FLITN CONTEXT
+
+                DEFINITION OF A PRECONDITION IN A FLINT CONTEXT
+
+                EXAMPLE OF AN ACTION AND A PRECONDITION
+                 
+                For each of these pairs, the action was given to a language model as part of a prompt 
+                and it was asked to return all its corresponding precondition(s) and their respective position(s) in the text. \n
+
+                It is your task to evaluate (on a 4-point Likkert scale) how well the model performed on \n
+
+                a) finding all the relevant preconditions in the text and \n
+                b) how clear the position in the text is that the model pointed to. \n
+
+                You will be provided with the document in which you can find the preconditions and the preconditions themselves, 
+                but NOT their true position in the text. \n
+
+                For evaluating part a) you can simply compare the preconditions the model named 
+                with the ones that were provided to you (which represent the ground truth). \n
+
+                For evaluating part b), it is your task to see whether you can find the precondition in the document with
+                the information you got from the prompt and evaluate the language model's performance based on how easy it was for you to find it. \n
+
+                This will take approximately [time required].
+
+                ### **Voluntary Participation:** 
+                
+                Your participation is completely voluntary. You may choose not to participate or to withdraw at any time without any penalty 
+                or having to provide any reason whatsoever.
+
+                ### **Anonymity:** 
+                
+                Your responses will be completely anonymous. No personal information will be collected, and your responses cannot be traced back to you.
+
+                ### **Risks and Benefits:** 
+                
+                There are no known risks associated with this study. The benefits include contributing to research that may improve
+                the usage of AI in a legal context.
+
+                ### **Contact Information:** 
+                
+                If you have any questions about this study, please contact jfurst@kth.se."""
+
+informed_consent_pdf_path = f'C:/Users/furstj/development/RAG/data/informed_consent/informed_consent_{unique_id}.pdf'
+
+##################################################################################################################################################
+
+
+
+
+
 # Display the consent text and button if consent has not been given
+
+#TODO: add name of repository and add time it takes to complete study
+
+#TODO: insert what a precondition is and what an action is in this context --> make accessible at any moment during the study
 if not st.session_state.consent_given:
-    st.write("**Consent Form**")
-    st.write("""
-    Please read the following consent form carefully before providing your feedback.
 
-    By participating in this feedback process, you agree to the collection and use of your feedback for research and development purposes. Your responses will be kept confidential and used to improve our services.
-    """)
+    # Display the current page
+    if st.session_state.page == 1:
+        
+        st.markdown("# Study Information")
 
-    # Consent radio button
-    consent = st.radio(
-        "Do you consent to provide feedback?",
-        ("No", "Yes")
-    )
+        ## Button to navigate to the informed consent page
+        if st.button("Informed Consent➡️"):
+            next_page()
+            st.rerun()
 
-    if st.button("Submit Consent"):
-        if consent == "Yes":
-            submit_consent()
-            print("consent given")
-            st.rerun()  # Trigger a refresh
-        else:
-            st.write("Please provide your consent to proceed.")
+        # Display the study information text
+        st.markdown(study_information_text)
+        
+        ## Button to navigate to the informed consent page
+        if st.button("Informed Consent➡️ "):
+            next_page()
+            st.rerun()
+
+        
+
+    elif st.session_state.page == 2:
+
+        # Button to navigate back to the study information page
+        if st.button("⬅️ Study Information"):
+            prev_page()
+            st.rerun()
+
+        # Display the informed consent text
+        st.markdown(informed_consent_text)
+        
+        #field for participant to enter name and surname
+        st.markdown("### **Participant Information:**")
+        name = st.text_area("Please enter your full name:", value="", max_chars=100, height=100)
+        
+        # Radio button to give consent
+        consent = st.radio(
+
+            "Do you consent with all of the above?"
+            ,
+            ("I do not agree", "I agree")
+        )
+
+        if st.button("Submit Consent"):
+            if consent == "I agree":
+                submit_consent(study_information_text, informed_consent_text, name, informed_consent_pdf_path)
+
+                print("consent given")
+                st.rerun()  # Trigger a refresh
+            else:
+                st.write("Please provide your consent to proceed.")
+
+        
+    
+    
 else:
     # Get the current question and answer
     current_index = st.session_state.current_index
@@ -108,17 +219,17 @@ else:
         # Create Likert scales for feedback
         feedback_1 = st.radio(
             "How well were the preconditions extracted?",
-            ("Very dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very satisfied")
+            ("Very dissatisfied", "Dissatisfied", "Satisfied", "Very satisfied")
         )
 
         feedback_2 = st.radio(
             "How clear is the position in the text the model pointed to?",
-            ("Very unclear", "Unclear", "Neutral", "Clear", "Very clear")
+            ("Very unclear", "Unclear", "Clear", "Very clear")
         )
 
         # Save the feedback and move to the next question
         if st.button("Submit Feedback"):
-            submit_feedback(feedback_1, feedback_2)
+            submit_feedback(feedback_1, feedback_2, data, unique_id)
             print("feedback given")
             st.rerun()  # Trigger a refresh
     else:
