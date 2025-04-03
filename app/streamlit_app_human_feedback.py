@@ -72,7 +72,25 @@ informed_consent_text = f"""
             \n\n\n
 
             """
+definitions = """
 
+            ### **Definitions:**
+
+            Within this study, you will need to evaluate the responses given by a language model 
+            for extracting preconditions from a text based on the action that is provided to it. 
+            Hence, it is handy to get a clearer idea what is implied by these terms:
+
+            An ***action*** can be performed by an agent within the normative system defined by the legal document.
+
+            A ***precondition*** describes the circumstances under which the act can be performed legally.
+
+            An example action in the context of a library might be 'Person A is lending a book'. 
+            Then, corresponding preconditions would be that they are \n
+
+            1. A library member and \n
+            2. do not have any open fines.\n
+
+            """
 
 study_information_text = f"""
                     
@@ -89,15 +107,26 @@ study_information_text = f"""
                 You are invited to participate in a research study about Language Model performance in extracting information from Dutch legal documents. 
                 Your participation will help to train the language model at hand from your feedback.
 
+
+                ### **Definitions:**
+
+                Within this study, you will need to evaluate the responses given by a language model 
+                for extracting preconditions from a text based on the action that is provided to it. 
+                Hence, it is handy to get a clearer idea what is implied by these terms:
+
+                An ***action*** can be performed by an agent within the normative system defined by the legal document.
+
+                A ***precondition*** describes the circumstances under which the act can be performed legally.
+
+                An example action in the context of a library might be 'Person A is lending a book'. 
+                Then, corresponding preconditions would be that they are \n
+
+                1. A library member and \n
+                2. do not have any open fines.\n
+
                 ### **Procedures:** 
                 
-                If you agree to participate, you will be shown {number_of_pairs} pairs of an action and its correprecondtion precondition(s).
-
-                DEFINITION OF AN ACTION IN A FLITN CONTEXT
-
-                DEFINITION OF A PRECONDITION IN A FLINT CONTEXT
-
-                EXAMPLE OF AN ACTION AND A PRECONDITION
+                If you agree to participate, you will be shown {number_of_pairs} pairs of an action and its corresponding precondition(s).
                  
                 For each of these pairs, the action was given to a language model as part of a prompt 
                 and it was asked to return all its corresponding precondition(s) and their respective position(s) in the text. \n
@@ -137,6 +166,8 @@ study_information_text = f"""
                 If you have any questions about this study, please contact jfurst@kth.se."""
 
 informed_consent_pdf_path = f'C:/Users/furstj/development/RAG/data/informed_consent/informed_consent_{unique_id}.pdf'
+
+ground_truth = "NEEDS TO BE ADDED"
 
 ##################################################################################################################################################
 
@@ -212,9 +243,21 @@ else:
         question = data[current_index].get('query')
         answer = data[current_index].get('answer')
 
+        #Display the definition of and action and a precondition
+        st.markdown(definitions)
+
         # Display the question and answer
-        st.write(f"**Query:** {question}")
-        st.write(f"**Answer:** {answer}")
+        st.markdown(f"""
+                    ### **Query:** 
+                     {question}""")
+        st.write(f"""
+                    ### **Answer:** 
+                     {answer}""")
+        
+        st.write(f"""
+                    ### **Ground Truth:**
+                    {ground_truth}
+        """)
 
         # Create Likert scales for feedback
         feedback_1 = st.radio(
