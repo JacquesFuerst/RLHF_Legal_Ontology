@@ -167,7 +167,7 @@ study_information_text = f"""
 
 informed_consent_pdf_path = f'C:/Users/furstj/development/RAG/data/informed_consent/informed_consent_{unique_id}.pdf'
 
-ground_truth = "NEEDS TO BE ADDED"
+ground_truth = "NEEDS TO BE ADDED SOON"
 
 ##################################################################################################################################################
 
