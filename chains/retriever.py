@@ -1,5 +1,5 @@
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+from models.huggingface.huggingface_pte_qwen_7B import load_embeddings
 
 
 def retrieve_chunks(query):
@@ -13,17 +13,16 @@ def retrieve_chunks(query):
     list: The most relevant text chunks
     """
     # Instantiate the OllamaEmbeddings model
-    embedding_function = OllamaEmbeddings(model="nomic-embed-text")
     vector_store = Chroma(persist_directory="./vector_db", 
-                          embedding_function=embedding_function)
+                          embedding_function=load_embeddings)
     
     # Get the total number of documents in the vector store
     total_documents = vector_store._collection.count()
     # print(f"Total documents in vector store: {total_documents}")
 
     # Generate query embedding
-    query_embedding = embedding_function.embed_query(text=query)
-    # print(f"Query embedding: {query_embedding}")
+    # query_embedding = embedding_function.embed_query(text=query)
+    # # print(f"Query embedding: {query_embedding}")
 
     # Retrieve chunks
     chunks = vector_store.similarity_search_with_score(query=query, k=3)

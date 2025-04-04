@@ -1,0 +1,8 @@
+langchain_chroma
+langchain_ollama
+transformers
+langchain
+sentence-transformers
+streamlit
+fpdf
+acccelerate

@@ -1,4 +1,4 @@
-from ollama_model.llama32 import load_llm
+from models.huggingface.huggingface_qwen_7B_1M import load_llm_and_tokenizer
 from chains.retriever import retrieve_chunks
 
 
@@ -81,7 +81,7 @@ def get_rag_response(query):
         str: The response from the RAG
         str: The context in which the response was generated
         """
-        llm = load_llm()
+        llm, tokenizer = load_llm_and_tokenizer()
         retrieved_chunks = retrieve_chunks(query)
 
         print(f"Retrieved chunks: {retrieved_chunks}")
@@ -91,12 +91,21 @@ def get_rag_response(query):
         #, similarity score {chunk[1]}
         context = "\n".join([f"Page {chunk[0].metadata['page_number']}: {chunk[0].page_content}" for chunk in retrieved_chunks])
 
-        #TODO: use chain.invoke here later?
+        
 
 
-
+        # Generate the prompt using the query and context
         prompt = generate_prompt(query, context)
-        response = llm.invoke(prompt)
+
+        # Tokenize the prompt
+        inputs = tokenizer(prompt, return_tensors="pt").to(llm.device)
+
+        # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
+        generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.7)
+        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        # ollama version
+        # response = llm.invoke(prompt)
 
         print("response: ", response)
         return response, retrieved_chunks

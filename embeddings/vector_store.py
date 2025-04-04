@@ -1,5 +1,6 @@
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+from models.huggingface.huggingface_pte_qwen_7B import load_embeddings
+
 
 #TODO: think about using individual libraries or maybe langchain_community
 
@@ -13,5 +14,7 @@ def store_embeddings(chunks):
     Returns:
     None
     """
-    embeddings = OllamaEmbeddings(model="nomic-embed-text") #TODO: use llama to create the embeddings for now, maybe switch language model
+    embeddings =  load_embeddings()
+
+    # Create a Chroma vector store and persist it to disk
     vector_store = Chroma.from_documents(chunks, embeddings, persist_directory="./vector_db")
