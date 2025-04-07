@@ -9,9 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # load the relevant devices available on the server
-print("Available devices: ", os.getenv("AVAILABLE_DEVICES"))
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
-print("Number of GPUs available: ", torch.cuda.device_count())
 
 
 def retrieve_chunks(query):

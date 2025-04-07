@@ -12,9 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # load the relevant devices available on the server
-print("Available devices: ", os.getenv("AVAILABLE_DEVICES"))
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
-print("Number of GPUs available: ", torch.cuda.device_count())
 
 
 class EmbeddingModel:
@@ -28,7 +26,7 @@ class EmbeddingModel:
         model_name (str): The name of the SentenceTransformer model to use.
         """
         self.model_name = model_name
-        self.model = nn.DataParallel(SentenceTransformer(self.model_name).eval(), device_ids=[1,2]).to(get_device())
+        self.model = nn.DataParallel(SentenceTransformer(self.model_name, trust_remote_code=True).eval(), device_ids=[1,2]).to(get_device())
     
     def embed_query(self, query):
         """

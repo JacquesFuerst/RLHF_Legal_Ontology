@@ -9,3 +9,4 @@ acccelerate
 fitz
 pymupdf
 langchain_huggingface
+einops

@@ -10,7 +10,6 @@ load_dotenv()
 
 # load the relevant devices available on the server
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
-print("Number of GPUs available: ", torch.cuda.device_count())
 
 def generate_prompt(query, context):
         """
@@ -41,6 +40,7 @@ def generate_prompt(query, context):
 
                 Precondition: A precondition is a single verb that precedes and causes the event in time. It is always part of the same sentence as the event, but not of the event itself.
                 Event: An event is a single verb that describes an action or occurrence.
+
                 --- Examples ---
 
                 Example 1: 
@@ -71,10 +71,14 @@ def generate_prompt(query, context):
                 
                 Query: Find the precondition for the following event: {query}. Provide its page and line number in the document. \n \n
 
+                --- Answer ---
+
                 Provide the answer in the following format: \n \n
                 According to the document on page <page number>, line <line number>, the precondition is: \n 
                 Precondition: <precondition> \n \n
                 Reason: <reason for the page and line number> \n \n
+
+                Do not return the prompt, only the answer! \n \n
                 """
         return prompt
 
@@ -112,7 +116,7 @@ def get_rag_response(query):
         inputs = tokenizer(prompt, return_tensors="pt").to(llm.device)
 
         # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
-        generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.7)
+        generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.2, top_k=50, top_p=0.95, num_return_sequences=1)
         response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
         # ollama version

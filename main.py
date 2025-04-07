@@ -9,7 +9,6 @@ load_dotenv()
 
 # load the relevant devices available on the server
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
-print("Number of GPUs available: ", torch.cuda.device_count())
 
 def main():
     # Define the path to your data folder
