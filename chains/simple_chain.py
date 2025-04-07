@@ -1,6 +1,16 @@
-from models.huggingface.huggingface_qwen_7B_1M import load_llm_and_tokenizer
+from models.huggingface.generator import Generator
 from chains.retriever import retrieve_chunks
 
+import os
+import torch
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# load the relevant devices available on the server
+os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
+print("Number of GPUs available: ", torch.cuda.device_count())
 
 def generate_prompt(query, context):
         """
@@ -81,7 +91,8 @@ def get_rag_response(query):
         str: The response from the RAG
         str: The context in which the response was generated
         """
-        llm, tokenizer = load_llm_and_tokenizer()
+        generator = Generator(os.getenv("GENERATION_MODEL_NAME"))
+        llm, tokenizer = generator.load_llm_and_tokenizer()
         retrieved_chunks = retrieve_chunks(query)
 
         print(f"Retrieved chunks: {retrieved_chunks}")

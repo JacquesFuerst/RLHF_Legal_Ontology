@@ -6,3 +6,6 @@ sentence-transformers
 streamlit
 fpdf
 acccelerate
+fitz
+pymupdf
+langchain_huggingface

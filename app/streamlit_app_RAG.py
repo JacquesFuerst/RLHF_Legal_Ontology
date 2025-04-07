@@ -1,8 +1,18 @@
 import sys
+import torch
 import os
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# load the relevant devices available on the server
+os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
+print("Number of GPUs available: ", torch.cuda.device_count())
 
 import streamlit as st
 from chains.simple_chain import get_rag_response

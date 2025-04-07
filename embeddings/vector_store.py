@@ -1,5 +1,17 @@
 from langchain_chroma import Chroma
-from models.huggingface.huggingface_pte_qwen_7B import load_embeddings
+from models.huggingface.embedding_model import EmbeddingModel
+
+import os
+import torch
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# load the relevant devices available on the server
+os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
+print("Number of GPUs available: ", torch.cuda.device_count())
+
 
 
 #TODO: think about using individual libraries or maybe langchain_community
@@ -14,7 +26,7 @@ def store_embeddings(chunks):
     Returns:
     None
     """
-    embeddings =  load_embeddings()
+    embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embedding model name from environment variables
 
     # Create a Chroma vector store and persist it to disk
-    vector_store = Chroma.from_documents(chunks, embeddings, persist_directory="./vector_db")
+    vector_store = Chroma.from_documents(chunks, embed_func, persist_directory="./vector_db")
