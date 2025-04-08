@@ -6,6 +6,16 @@ import csv
 
 from datetime import datetime
 
+import markdown
+from weasyprint import HTML
+
+def convert_markdown_to_html(markdown_text):
+    """
+    Convert markdown text to HTML.
+    """
+    html = markdown.markdown(markdown_text)
+    return html
+
 # Function to handle consent submission
 def submit_consent(study_information_text, informed_consent_text, name, informed_consent_pdf_path):
     # set the state for consent being given tot true
@@ -14,10 +24,17 @@ def submit_consent(study_information_text, informed_consent_text, name, informed
     # Function to create a PDF
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    pdf = create_pdf(
-        study_information_text + informed_consent_text + f"Name: {name}\n\n\n" + current_time
-    )
-    pdf_output = pdf.output(dest='F', name=informed_consent_pdf_path).encode('latin1')
+    full_text = study_information_text + informed_consent_text + f"Name: {name}\n\n\n" + current_time
+
+    # Convert Markdown to HTML
+    html_content = convert_markdown_to_html(full_text)
+
+    # Use WeasyPrint to generate PDF from the HTML content
+    pdf = HTML(string=html_content).write_pdf()
+
+    # Save the PDF to a specified file
+    with open(informed_consent_pdf_path, 'wb') as pdf_file:
+        pdf_file.write(pdf)
 
 
 

@@ -10,7 +10,7 @@ import streamlit as st
 import uuid
 from datetime import datetime
 
-from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback, create_pdf
+from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback
 
 
 ##################### Streamlit app session states #########################
