@@ -10,3 +10,5 @@ fitz
 pymupdf
 langchain_huggingface
 einops
+markdown
+pdfkit

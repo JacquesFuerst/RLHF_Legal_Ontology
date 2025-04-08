@@ -7,7 +7,7 @@ import csv
 from datetime import datetime
 
 import markdown
-from weasyprint import HTML
+import pdfkit
 
 def convert_markdown_to_html(markdown_text):
     """
@@ -29,12 +29,8 @@ def submit_consent(study_information_text, informed_consent_text, name, informed
     # Convert Markdown to HTML
     html_content = convert_markdown_to_html(full_text)
 
-    # Use WeasyPrint to generate PDF from the HTML content
-    pdf = HTML(string=html_content).write_pdf()
-
-    # Save the PDF to a specified file
-    with open(informed_consent_pdf_path, 'wb') as pdf_file:
-        pdf_file.write(pdf)
+    # Save the HTML content to a PDF
+    pdfkit.from_string(html_content, informed_consent_pdf_path)
 
 
 
