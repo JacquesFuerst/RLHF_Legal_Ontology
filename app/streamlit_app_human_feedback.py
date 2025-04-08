@@ -42,7 +42,7 @@ unique_id = st.session_state.unique_id
 current_date = datetime.now().strftime("%d-%m-%Y")
 
 # Define the number of prompt-answer pairs the user needs to fill in
-number_of_pairs = 50 #TODO: define as actual number of pairs
+number_of_pairs = 150 
 
 # amounbt of hours study will take
 hours = 2
