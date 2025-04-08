@@ -26,7 +26,7 @@ class EmbeddingModel:
         model_name (str): The name of the SentenceTransformer model to use.
         """
         self.model_name = model_name
-        self.model = nn.DataParallel(SentenceTransformer(self.model_name, trust_remote_code=True).eval(), device_ids=[1,2]).to(get_device())
+        self.model = nn.DataParallel(SentenceTransformer(self.model_name, trust_remote_code=True).eval(), device_ids=[0,1]).to(get_device())
     
     def embed_query(self, query):
         """

@@ -10,6 +10,14 @@ load_dotenv()
 
 # load the relevant devices available on the server
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+
+from huggingface_hub import snapshot_download
+from pathlib import Path
+
+mistral_models_path = '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/stored_models'
+
+snapshot_download(repo_id="mistralai/Mistral-7B-Instruct-v0.3", allow_patterns=["params.json", "consolidated.safetensors", "tokenizer.model.v3"], local_dir=mistral_models_path)
 
 
 def retrieve_chunks(query):
