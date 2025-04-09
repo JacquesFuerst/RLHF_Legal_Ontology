@@ -117,10 +117,14 @@ def get_rag_response(query):
 
         # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
         generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.2, top_k=50, top_p=0.95, num_return_sequences=1)
-        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+        # Exclude the prompt from the output
+        prompt_length = inputs['input_ids'].shape[1]
+        answer = tokenizer.decode(generated_ids[0][prompt_length:], skip_special_tokens=True)
+        # response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
         # ollama version
         # response = llm.invoke(prompt)
 
-        print("response: ", response)
-        return response, retrieved_chunks
+        print("response: ", answer)
+        return answer, retrieved_chunks

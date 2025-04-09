@@ -1,0 +1,36 @@
+<h3><strong>Informed Consent:</strong></h3>
+    
+<div class="consent-text">
+    <p>Door deel te nemen aan deze studie erken ik dat ik de studie-informatie van <span id="current_date">{current_date}</span> heb gelezen en begrepen, of dat deze aan mij is voorgelezen. Ik heb de gelegenheid gehad om vragen over de studie te stellen en mijn vragen zijn naar tevredenheid beantwoord.</p>
+</div>
+
+<div class="consent-text">
+    <p>Ik geef vrijwillig toestemming om deel te nemen aan deze studie en begrijp dat ik vragen kan weigeren te beantwoorden en dat ik op elk moment zonder opgave van reden kan stoppen met de studie.</p>
+</div>
+
+<div class="consent-text">
+    <p>Ik begrijp dat deelname aan de studie inhoudt dat ik LLM-antwoorden op juridische vragen beoordeel.</p>
+</div>
+
+<div class="consent-text">
+    <p>Ik begrijp dat de informatie die ik verstrek alleen voor onderzoeksdoeleinden wordt gebruikt en vertrouwelijk zal worden behandeld.</p>
+</div>
+
+<div class="consent-text">
+    <p>Ik begrijp dat persoonlijke informatie die over mij wordt verzameld en mij kan identificeren, zoals (d.w.z. mijn naam), niet buiten het studie-team zal worden gedeeld.</p>
+</div>
+
+<div class="consent-text">
+    <p>Ik geef toestemming voor het archiveren van de feedbackgegevens die ik verstrek in <a href="https://github.com/JacquesFuerst/RLHF_Legal_Ontology" target="_blank">github.com/JacquesFuerst/RLHF_Legal_Ontology</a>, zodat deze kan worden gebruikt voor toekomstig onderzoek en leren.</p>
+</div>
+
+<script>
+    // Get the current date
+    const currentDate = new Date();
+    
+    // Format the date (e.g., MM/DD/YYYY)
+    const formattedDate = currentDate.toLocaleDateString();
+
+    // Display the date in the span with id="currentDate"
+    document.getElementById("currentDate").textContent = formattedDate;
+</script>

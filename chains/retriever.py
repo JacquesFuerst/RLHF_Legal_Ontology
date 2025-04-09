@@ -12,6 +12,10 @@ load_dotenv()
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
 # os.environ['TRANSFORMERS_OFFLINE'] = '1'
 
+# from huggingface_hub import snapshot_download
+
+# snapshot_download(repo_id=os.getenv("GENERATION_MODEL_NAME"))
+
 
 def retrieve_chunks(query):
     """

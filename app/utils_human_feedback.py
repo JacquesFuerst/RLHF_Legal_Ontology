@@ -6,15 +6,33 @@ import csv
 
 from datetime import datetime
 
-import markdown
-import pdfkit
+from weasyprint import HTML, CSS
 
-def convert_markdown_to_html(markdown_text):
+from dotenv import load_dotenv
+
+
+# Load environment variables from .env file
+load_dotenv()
+
+# def convert_markdown_to_html(markdown_text):
+#     """
+#     Convert markdown text to HTML.
+#     """
+#     html = markdown.markdown(markdown_text)
+#     return html
+
+def load_html(file_path, hours, number_of_pairs):
     """
-    Convert markdown text to HTML.
+    Load HTML content from a file and replace placeholders with actual values.
     """
-    html = markdown.markdown(markdown_text)
-    return html
+    with open(file_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+    
+    # Replace placeholders with actual values
+    html_content = html_content.format(current_date= datetime.now().strftime('%d-%m-%Y'), hours=hours, number_of_pairs=number_of_pairs)
+    html_content = html_content.replace("{{number_of_pairs}}", str(number_of_pairs))
+    
+    return html_content
 
 # Function to handle consent submission
 def submit_consent(study_information_text, informed_consent_text, name, informed_consent_pdf_path):
@@ -24,13 +42,12 @@ def submit_consent(study_information_text, informed_consent_text, name, informed
     # Function to create a PDF
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    full_text = study_information_text + informed_consent_text + f"Name: {name}\n\n\n" + current_time
+    full_text = study_information_text + informed_consent_text + f"Name and date: {name}, " + current_time
+    
+    css = CSS(os.getenv('INFORMED_CONSENT_CSS'))
 
     # Convert Markdown to HTML
-    html_content = convert_markdown_to_html(full_text)
-
-    # Save the HTML content to a PDF
-    pdfkit.from_string(html_content, informed_consent_pdf_path)
+    HTML(string=full_text).write_pdf(informed_consent_pdf_path, stylesheets=[css])
 
 
 
@@ -53,7 +70,7 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id):
     data[current_index]['feedback_detection'] = feedback_2
     
     # Define the CSV file path
-    csv_file_path = f'C:/Users/furstj/development/RAG/data/human_feedback/queries_{unique_id}.csv'
+    csv_file_path = os.getenv('HUMAN_FEEDBACK_CSV') + f'_{unique_id}.csv'
     
     # Check if the CSV file already exists
     file_exists = os.path.isfile(csv_file_path)
@@ -73,10 +90,10 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id):
 
 
 
-# function to create pdf
-def create_pdf(text):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, text)
-    return pdf
+# # function to create pdf
+# def create_pdf(text):
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.set_font("Arial", size=12)
+#     pdf.multi_cell(0, 10, text)
+#     return pdf

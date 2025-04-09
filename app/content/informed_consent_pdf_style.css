@@ -1,0 +1,76 @@
+
+
+/* General body styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Headings styling */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: bold;
+    margin-top: 1em;
+}
+
+h1 {
+    font-size: 26px;
+}
+
+h2 {
+    font-size: 24px;
+}
+
+h3 {
+    font-size: 22px;
+}
+
+h4 {
+    font-size: 20px;
+}
+
+h5 {
+    font-size: 18px;
+}
+
+h6 {
+    font-size: 16px;
+}
+
+/* Ensure bold text is properly rendered */
+strong {
+    font-weight: bold;
+}
+
+/* Line breaks: ensure markdown newlines and lists are formatted correctly */
+p {
+    margin-bottom: 1em;
+    page-break-inside: avoid;
+}
+
+ul, ol {
+    margin-left: 20px;
+}
+
+li {
+    margin-bottom: 0.5em;
+}
+
+/* Prevent text from going off the page and keep it within the page */
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+/* Keep text within the container */
+div {
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+/* Ensure paragraph breaks where needed */
+br {
+    line-height: 1.6;
+}

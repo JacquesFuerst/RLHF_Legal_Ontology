@@ -10,7 +10,12 @@ import streamlit as st
 import uuid
 from datetime import datetime
 
-from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback
+from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback, load_html
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 ##################### Streamlit app session states #########################
@@ -38,273 +43,31 @@ if 'consent_given' not in st.session_state:
 # Access the unique identifier
 unique_id = st.session_state.unique_id
 
-# Define current date
-current_date = datetime.now().strftime("%d-%m-%Y")
-
 # Define the number of prompt-answer pairs the user needs to fill in
 number_of_pairs = 150 
 
 # amounbt of hours study will take
 hours = 2
 
+# Load the HTML files
+definitions = load_html(os.getenv('DEFINITIONS_HTML_PATH'), hours, number_of_pairs)
+informed_consent = load_html(os.getenv('INFORMED_CONSENT_HTML_PATH'), hours, number_of_pairs)
+study_information = load_html(os.getenv('STUDY_INFORMATION_HTML_PATH'), hours, number_of_pairs)
+
 
 # Load the JSON file
-data = read_json('C:/Users/furstj/development/RAG/data/querys_and_responses/query_data.json')
+data = read_json(os.getenv('QUERYS_AND_RESPONSES'))
 
+# informed consent pdf path
+informed_consent_pdf_path = os.getenv('INFORMED_CONSENT_STORAGE_PATH') + f'_{unique_id}.pdf'
 
-informed_consent_text_en = f"""
-            
-            ### **Informed Consent:**
-                    
-            
-            By proceeding with this study, I acknowledge that I have read and understood the study information dated {current_date}, 
-            or it has been read to me. I have been able to ask questions about the study and my questions have been answered to my satisfaction.
-
-            I consent voluntarily to be a participant in this study and understand that I can refuse to answer questions 
-            and I can withdraw from the study at any time, without having to give a reason.
-
-            I understand that taking part in the study involves rating LLM responses to legal queries.
-
-            I understand that information I provide will be used for research purposes only and will be treated confidentially.
-
-            I understand that personal information collected about me that can identify me, such as (i.e. my name), 
-            will not be shared beyond the study team.
-
-            I give permission for the feedback data that I provide to be archived in [name of data repository] 
-            so it can be used for future research and learning.
-            \n\n\n
-
-            """
-
-informed_consent_text_nl = f"""
-
-
-            ### **Informed Consent:**
-
-            Informed Consent:
-
-            Door deel te nemen aan deze studie erken ik dat ik de studie-informatie van {current_date} heb gelezen en begrepen, 
-            of dat deze aan mij is voorgelezen. Ik heb de gelegenheid gehad om vragen over de studie te stellen 
-            en mijn vragen zijn naar tevredenheid beantwoord.
-
-            Ik geef vrijwillig toestemming om deel te nemen aan deze studie en begrijp dat ik vragen kan weigeren te beantwoorden 
-            en dat ik op elk moment zonder opgave van reden kan stoppen met de studie.
-
-            Ik begrijp dat deelname aan de studie inhoudt dat ik LLM-antwoorden op juridische vragen beoordeel.
-
-            Ik begrijp dat de informatie die ik verstrek alleen voor onderzoeksdoeleinden wordt gebruikt en vertrouwelijk zal worden behandeld.
-
-            Ik begrijp dat persoonlijke informatie die over mij wordt verzameld en mij kan identificeren, zoals (d.w.z. mijn naam), 
-            niet buiten het studie-team zal worden gedeeld.
-
-            Ik geef toestemming voor het archiveren van de feedbackgegevens die ik verstrek in [naam van de gegevensrepository], 
-            zodat deze kan worden gebruikt voor toekomstig onderzoek en leren.
-
-            """
-
-
-
-definitions_en = """
-
-            ### **Definitions:**
-
-            Within this study, you will need to evaluate the responses given by a language model 
-            for extracting preconditions from a text based on the action that is provided to it. 
-            Hence, it is handy to get a clearer idea what is implied by these terms:
-
-            An ***action*** can be performed by an agent within the normative system defined by the legal document.
-
-            A ***precondition*** describes the circumstances under which the act can be performed legally.
-
-            An example action in the context of a library might be 'Person A is lending a book'. 
-            Then, corresponding preconditions would be that they are \n
-
-            1. A library member and \n
-            2. do not have any open fines.\n
-
-            """
-
-definitions_nl = """
-            ### **Definities:**
-
-            Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven 
-            om precondities uit een tekst te extraheren op basis van de handeling die aan het model wordt gegeven. 
-            Daarom is het handig om een duidelijker idee te krijgen van wat deze termen impliceren:
-
-            Een ***actie*** kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.
-
-            Een ***preconditie*** beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd.
-
-            Een voorbeeld van een handeling in de context van een bibliotheek zou kunnen zijn: 'Persoon A leent een boek'. 
-            De bijbehorende precondities zouden dan zijn:
-
-            1. Een lid van de bibliotheek zijn en \n
-
-            2. geen openstaande boetes hebben. \n
-
-            """
-
-study_information_text_en = f"""
-                    
-                ### **General Information:**
-                
-                **Study Title:** Reinforcement Learning from Human Feedback for legal Ontology Information Extraction
-
-                **Researcher:** Jacques Fürst, KTH - Royal Institute of Technology
-                
-                **Date**: {current_date}
-
-                ### **Purpose of the Study:** 
-                
-                You are invited to participate in a research study about Language Model performance in extracting information from Dutch legal documents. 
-                Your participation will help to train the language model at hand from your feedback.
-
-
-                ### **Definitions:**
-
-                Within this study, you will need to evaluate the responses given by a language model 
-                for extracting preconditions from a text based on the action that is provided to it. 
-                Hence, it is handy to get a clearer idea what is implied by these terms:
-
-                An ***action*** can be performed by an agent within the normative system defined by the legal document.
-
-                A ***precondition*** describes the circumstances under which the act can be performed legally.
-
-                An example action in the context of a library might be 'Person A is lending a book'. 
-                Then, corresponding preconditions would be that they are \n
-
-                1. A library member and \n
-                2. do not have any open fines.\n
-
-                ### **Procedures:** 
-                
-                If you agree to participate, you will be shown {number_of_pairs} pairs of an action and its corresponding precondition(s).
-                 
-                For each of these pairs, the action was given to a language model as part of a prompt 
-                and it was asked to return all its corresponding precondition(s) and their respective position(s) in the text. \n
-
-                It is your task to evaluate (on a 4-point Likkert scale) how well the model performed on \n
-
-                a) finding all the relevant preconditions in the text and \n
-                b) how clear the position in the text is that the model pointed to. \n
-
-                You will be provided with the document in which you can find the preconditions and the preconditions themselves, 
-                but NOT their true position in the text. \n
-
-                For evaluating part a) you can simply compare the preconditions the model named 
-                with the ones that were provided to you (which represent the ground truth). \n
-
-                For evaluating part b), it is your task to see whether you can find the precondition in the document with
-                the information you got from the prompt and evaluate the language model's performance based on how easy it was for you to find it. \n
-
-                This will take approximately {hours} hours.
-
-                ### **Voluntary Participation:** 
-                
-                Your participation is completely voluntary. You may choose not to participate or to withdraw at any time without any penalty 
-                or having to provide any reason whatsoever.
-
-                ### **Anonymity:** 
-                
-                Your responses will be completely anonymous. No personal information will be collected, and your responses cannot be traced back to you.
-
-                ### **Risks and Benefits:** 
-                
-                There are no known risks associated with this study. The benefits include contributing to research that may improve
-                the usage of AI in a legal context.
-
-                ### **Contact Information:** 
-                
-                If you have any questions about this study, please contact jfurst@kth.se.
-                
-                """
-
-study_information_text_nl = f"""
-
-                ### **Algemene Informatie:**
-
-                **Studietitel:** Reinforcement Learning from Human Feedback for legal Ontology Information Extraction
-
-                **Onderzoeker:** Jacques Fürst, KTH - Royal Institute of Technology
-
-                **Datum:** {current_date}
-
-                ### **Doel van de Studie:**
-                U wordt uitgenodigd om deel te nemen aan een onderzoeksstudie over de prestaties van een taalmodel bij het extraheren van informatie 
-                uit Nederlandse juridische documenten. Uw deelname zal helpen om het taalmodel te trainen op basis van uw feedback.
-
-                ### **Definities:**
-                Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven voor het extraheren van precondities 
-                uit een tekst op basis van de handeling die aan het model wordt gegeven. Daarom is het handig om een duidelijker idee te krijgen 
-                van wat deze termen impliceren:
-
-                Een handeling kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.
-
-                Een preconditie beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd.
-
-                Een voorbeeld van een handeling in de context van een bibliotheek zou kunnen zijn: 'Persoon A leent een boek'. 
-                De bijbehorende precondities zouden dan zijn:
-
-                Een lid van de bibliotheek zijn en
-
-                geen openstaande boetes hebben.
-
-                ### **Procedure:**
-                Als u instemt met deelname, krijgt u {number_of_pairs} paren van een handeling en de bijbehorende preconditie(s) te zien.
-
-                Voor elk van deze paren werd de handeling aan een taalmodel gegeven als onderdeel van een prompt en werd gevraagd 
-                om alle bijbehorende preconditie(s) en hun respectieve positie(s) in de tekst terug te geven.
-
-                Het is uw taak om (op een 4-punt Likert-schaal) te evalueren hoe goed het model presteerde bij:
-
-                a) het vinden van alle relevante precondities in de tekst en
-
-                b) hoe duidelijk de positie in de tekst is die het model aanduidde.
-
-                U ontvangt het document waarin u de precondities kunt vinden en de precondities zelf, maar NIET hun werkelijke positie in de tekst.
-
-                Voor het evalueren van onderdeel 
-                
-                a) kunt u eenvoudig de precondities vergelijken die het model noemde met degene die aan u werden verstrekt 
-                (die de waarheid vertegenwoordigen).
-
-                b) is het uw taak om te zien of u de preconditie kunt vinden in het document met de informatie die u uit de prompt hebt gekregen 
-                en de prestaties van het taalmodel te evalueren op basis van hoe gemakkelijk het voor u was om deze te vinden.
-
-                Dit zal ongeveer {hours} uur duren.
-
-                ### **Vrijwillige Deelname:**
-                Uw deelname is volledig vrijwillig. U kunt ervoor kiezen om niet deel te nemen of op elk moment 
-                zonder enige straf of verplichting om een reden terug te trekken.
-
-                ### **Anonymiteit:**
-                Uw antwoorden zullen volledig anoniem zijn. Er worden geen persoonlijke gegevens verzameld 
-                en uw antwoorden kunnen niet naar u worden herleid.
-
-                ### **Risico's en Voordelen:**
-                Er zijn geen bekende risico's verbonden aan deze studie. De voordelen omvatten het bijdragen aan onderzoek dat het gebruik van AI 
-                in een juridische context kan verbeteren.
-
-                Contactinformatie:
-                Als u vragen heeft over deze studie, kunt u contact opnemen met jfurst@kth.se.
-
-                """
-
-informed_consent_pdf_path = f'C:/Users/furstj/development/RAG/data/informed_consent/informed_consent_{unique_id}.pdf'
-
+# the ground truth
 ground_truth = "NEEDS TO BE ADDED SOON"
 
 ##################################################################################################################################################
 
 
-
-
-
 # Display the consent text and button if consent has not been given
-
-#TODO: add name of repository and add time it takes to complete study
-
-#TODO: insert what a precondition is and what an action is in this context --> make accessible at any moment during the study
 if not st.session_state.consent_given:
 
     # Display the current page
@@ -318,7 +81,7 @@ if not st.session_state.consent_given:
             st.rerun()
 
         # Display the study information text
-        st.markdown(study_information_text_nl)
+        st.markdown(study_information, unsafe_allow_html=True)
         
         ## Button to navigate to the informed consent page
         if st.button("Informed Consent➡️ "):
@@ -335,7 +98,7 @@ if not st.session_state.consent_given:
             st.rerun()
 
         # Display the informed consent text
-        st.markdown(informed_consent_text_nl)
+        st.markdown(informed_consent, unsafe_allow_html=True)
         
         #field for participant to enter name and surname
         st.markdown("### **Participant Information:**")
@@ -351,7 +114,7 @@ if not st.session_state.consent_given:
 
         if st.button("Submit Consent"):
             if consent == "I agree":
-                submit_consent(study_information_text_nl, informed_consent_text_nl, name, informed_consent_pdf_path)
+                submit_consent(study_information, informed_consent, name, informed_consent_pdf_path)
 
                 print("consent given")
                 st.rerun()  # Trigger a refresh
@@ -369,7 +132,7 @@ else:
         answer = data[current_index].get('answer')
 
         #Display the definition of and action and a precondition
-        st.markdown(definitions_nl)
+        st.markdown(definitions, unsafe_allow_html=True)
 
         # Display the question and answer
         st.markdown(f"""
