@@ -23,9 +23,10 @@ def generate_answers(ground_truth_file, knowledge_base_file):
     store_embeddings(docs)
 
     # Define prompt conditions for each answer
-    prompt_conditions_1 = None
-    prompt_conditions_2 = None
-    prompt_conditions_3 = None
+    prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': True}
+    prompt_conditions_2 = {'include_examples': True, 'include_chain_of_thought': False}
+    prompt_conditions_3 = {'include_examples': False, 'include_chain_of_thought': True}
+    prompt_conditions_4 = {'include_examples': False, 'include_chain_of_thought': False}
 
     with open(ground_truth_file, 'r') as file:
         data = json.load(file)
@@ -34,10 +35,12 @@ def generate_answers(ground_truth_file, knowledge_base_file):
         response_1 = get_rag_response(act['text'], prompt_conditions_1)
         response_2 = get_rag_response(act['text'], prompt_conditions_2)
         response_3 = get_rag_response(act['text'], prompt_conditions_3)
+        response_4 = get_rag_response(act['text'], prompt_conditions_4)
 
         act['responses'] = {prompt_conditions_1: response_1,
                             prompt_conditions_2: response_2,
-                            prompt_conditions_3: response_3
+                            prompt_conditions_3: response_3,
+                            prompt_conditions_4: response_4
                             }
         
     with open(f'acts_and_responses_{knowledge_base_file}', 'w') as file:
