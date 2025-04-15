@@ -23,6 +23,7 @@ def generate_prompt(query, context, prompt_conditions):
         str: The generated prompt
         """
         # set the boolean variables for what to include in the prompt
+
         include_examples = prompt_conditions['include_examples']
         include_chain_of_thought = prompt_conditions['include_chain_of_thought']
 
@@ -88,7 +89,7 @@ def generate_prompt(query, context, prompt_conditions):
         return prompt
 
 
-def get_rag_response(query):
+def get_rag_response(query, prompt_conditions=None):
         """
         Get the response from the RAG based on the query. 
         Retrieve the chunks, load the LLM, and se the context.
@@ -115,17 +116,21 @@ def get_rag_response(query):
 
 
         # Generate the prompt using the query and context
-        prompt = generate_prompt(query, context)
+        prompt = generate_prompt(query, context, prompt_conditions)
 
         # Tokenize the prompt
-        inputs = tokenizer(prompt, return_tensors="pt").to(llm.device)
+        with torch.no_grad():
+                inputs = tokenizer(prompt, return_tensors="pt").to(llm.device)
+
+        print(f"Prompt tokens: {inputs['input_ids'].shape[1]}")
 
         # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
-        generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.2, top_k=50, top_p=0.95, num_return_sequences=1)
+        with torch.no_grad():
+                generated_ids = llm.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.2, top_p=0.95, num_return_sequences=1)
 
         # Exclude the prompt from the output
-        prompt_length = inputs['input_ids'].shape[1]
-        answer = tokenizer.decode(generated_ids[0][prompt_length:], skip_special_tokens=True)
+        # prompt_length = inputs['input_ids'].shape[1]
+        answer = tokenizer.decode(generated_ids[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
         # response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
         # ollama version

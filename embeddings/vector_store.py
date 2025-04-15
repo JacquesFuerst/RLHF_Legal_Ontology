@@ -25,6 +25,8 @@ def store_embeddings(chunks):
     Returns:
     None
     """
+    devices = os.getenv("AVAILABLE_DEVICES")
+    print(f"Available devices: {devices}")
     embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embedding model name from environment variables
 
     # Create a Chroma vector store and persist it to disk
