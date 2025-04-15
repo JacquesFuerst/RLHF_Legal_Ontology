@@ -14,6 +14,8 @@ load_dotenv()
 # load the relevant devices available on the server
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
 
+# print(f"Using devices: {torch.cuda.device_count()}")
+
 
 class EmbeddingModel:
     """

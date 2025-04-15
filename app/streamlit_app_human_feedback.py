@@ -8,7 +8,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.json_handling import read_json
 import streamlit as st
 import uuid
-from datetime import datetime
 
 from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback, load_html
 
@@ -148,13 +147,17 @@ else:
         """)
 
         # Create Likert scales for feedback
+
+        #TODO: add proper questions and change radion button labels
+        
+
         feedback_1 = st.radio(
-            "How well were the preconditions extracted?",
+            "",
             ("Very dissatisfied", "Dissatisfied", "Satisfied", "Very satisfied")
         )
 
         feedback_2 = st.radio(
-            "How clear is the position in the text the model pointed to?",
+            "",
             ("Very unclear", "Unclear", "Clear", "Very clear")
         )
 
