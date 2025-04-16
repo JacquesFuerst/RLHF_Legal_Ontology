@@ -72,7 +72,7 @@ if not st.session_state.consent_given:
     # Display the current page
     if st.session_state.page == 1:
         
-        st.markdown("# Study Information")
+        st.markdown("# Studie Informatie")
 
         ## Button to navigate to the informed consent page
         if st.button("Informed Consent➡️"):
@@ -92,7 +92,7 @@ if not st.session_state.consent_given:
     elif st.session_state.page == 2:
 
         # Button to navigate back to the study information page
-        if st.button("⬅️ Study Information"):
+        if st.button("⬅️ Studie Informatie"):
             prev_page()
             st.rerun()
 
@@ -100,15 +100,19 @@ if not st.session_state.consent_given:
         st.markdown(informed_consent, unsafe_allow_html=True)
         
         #field for participant to enter name and surname
-        st.markdown("### **Participant Information:**")
-        name = st.text_area("Please enter your full name:", value="", max_chars=100, height=100)
+        st.markdown("### **Participant Informatie:**")
+        name = st.text_area("Voer uw volledige naam in:", value="", max_chars=100, height=100)
         
         # Radio button to give consent
+
+        st.markdown(
+            "###Stemt u in met al het bovenstaande?"
+        )
         consent = st.radio(
 
-            "Do you consent with all of the above?"
+            ""
             ,
-            ("I do not agree", "I agree")
+            ("Ik ga niet akkoord", "Ik ga akkoord")
         )
 
         if st.button("Submit Consent"):
@@ -138,7 +142,7 @@ else:
                     ### **Query:** 
                      {question}""")
         st.write(f"""
-                    ### **Answer:** 
+                    ### **Antwoord:** 
                      {answer}""")
         
         st.write(f"""
@@ -150,15 +154,22 @@ else:
 
         #TODO: add proper questions and change radion button labels
         
+        st.markdown(
+            "### In welke mate is de preconditie door het model geëxtraheerd?"
+        )
 
         feedback_1 = st.radio(
             "",
-            ("Very dissatisfied", "Dissatisfied", "Satisfied", "Very satisfied")
+            ("Volledig vermist", "Nauwelijks correct", "Grotendeels correct", "Volledig correct")
+        )
+
+        st.markdown(
+            "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
         )
 
         feedback_2 = st.radio(
             "",
-            ("Very unclear", "Unclear", "Clear", "Very clear")
+            ("Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
         )
 
         # Save the feedback and move to the next question
@@ -167,4 +178,4 @@ else:
             print("feedback given")
             st.rerun()  # Trigger a refresh
     else:
-        st.write("You have evaluated all queries. Thank you for your feedback!")
+        st.write("Je hebt alle vragen geëvalueerd. Hartelijk dank voor je feedback!")

@@ -1,5 +1,4 @@
 from langchain_chroma import Chroma
-from models.huggingface.embedding_model import EmbeddingModel
 import os
 import torch
 from dotenv import load_dotenv
@@ -10,14 +9,9 @@ load_dotenv()
 
 # load the relevant devices available on the server
 os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
-# os.environ['TRANSFORMERS_OFFLINE'] = '1'
-
-# from huggingface_hub import snapshot_download
-
-# snapshot_download(repo_id=os.getenv("GENERATION_MODEL_NAME"))
 
 
-def retrieve_chunks(query):
+def retrieve_chunks(query, embed_func):
     """
     When sending in the prompt, the system should return the most relevant text chunks from the vector database.
 
@@ -28,7 +22,7 @@ def retrieve_chunks(query):
     list: The most relevant text chunks
     """
 
-    embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embedding model name from environment variables
+    
     # Instantiate the OllamaEmbeddings model
     vector_store = Chroma(persist_directory="./vector_db", 
                           embedding_function=embed_func)

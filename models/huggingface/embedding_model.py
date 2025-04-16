@@ -6,6 +6,8 @@ from torch import nn
 from device_config import get_device
 import os
 
+import streamlit as st
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -37,6 +39,7 @@ class EmbeddingModel:
     """
     A class to handle embedding queries using a SentenceTransformer model.
     """
+    # @st.cache_resource
     def __init__(self, model_name):
         """
         Initialize the EmbeddingFunction with a SentenceTransformer model.
