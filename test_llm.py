@@ -25,6 +25,6 @@ embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embed
 
 # docs = extract_text(knowledge_base_file)
 
-response_1 = get_rag_response('toekennen recht op algemene bijstand college van de gemeente waar de belanghebbende woonplaats heeft', llm, tokenizer, embed_func, prompt_conditions_1)
+response_1 = get_rag_response('weigeren recht op algemene bijstand', llm, tokenizer, embed_func, prompt_conditions_1)
 
 print(response_1)

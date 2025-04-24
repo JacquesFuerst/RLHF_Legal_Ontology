@@ -25,7 +25,7 @@ def extract_text(file_path):
 
                 #add the original page number to the metadata to make sure that the model can retrieve it
                 metadata = {
-                    "page_number": page_num,
+                    "paginanummer": page_num,
                 }
                 documents.append(Document(page_content=page_text, metadata=metadata))
         return documents

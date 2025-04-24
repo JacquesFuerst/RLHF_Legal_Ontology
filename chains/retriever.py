@@ -36,7 +36,7 @@ def retrieve_chunks(query, embed_func):
     # # print(f"Query embedding: {query_embedding}")
 
     # Retrieve chunks
-    chunks = vector_store.similarity_search_with_score(query=query, k=3)
+    chunks = vector_store.similarity_search_with_score(query=query, k=5)
 
     #TODO: print similarity scores for documents to get insight into the retrieval process
 
