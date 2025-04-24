@@ -6,7 +6,7 @@ from torch import nn
 from device_config import get_device
 import os
 
-import streamlit as st
+# import streamlit as st
 
 from dotenv import load_dotenv
 
@@ -47,7 +47,7 @@ class EmbeddingModel:
         model_name (str): The name of the SentenceTransformer model to use.
         """
         self.model_name = model_name
-        self.model = nn.parallel.DataParallel(SentenceTransformer(self.model_name, trust_remote_code=True).eval(), device_ids=[0,1,2,3]).to(get_device())
+        self.model = SentenceTransformer(self.model_name, trust_remote_code=True).eval().to(get_device())
     
     def embed_query(self, query):
         """
@@ -59,7 +59,7 @@ class EmbeddingModel:
         """
 
         with torch.no_grad():
-            return self.model.module.encode(query, batch_size=4) # module is needed due to dataparallel
+            return self.model.encode(query, batch_size=4)
         
 
     def embed_documents(self, docs):
@@ -74,4 +74,4 @@ class EmbeddingModel:
         with torch.no_grad():
             devices = os.getenv("AVAILABLE_DEVICES")
             print(f"Available devices: {devices}")
-            return self.model.module.encode(docs, batch_size=4) # module is needed due to dataparallel
+            return self.model.encode(docs, batch_size=4)
