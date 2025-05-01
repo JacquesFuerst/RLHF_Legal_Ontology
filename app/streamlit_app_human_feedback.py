@@ -106,17 +106,17 @@ if not st.session_state.consent_given:
         # Radio button to give consent
 
         st.markdown(
-            "###Stemt u in met al het bovenstaande?"
+            "### Stemt u in met al het bovenstaande?"
         )
         consent = st.radio(
 
-            ""
+            label="Antwoord:"
             ,
-            ("Ik ga niet akkoord", "Ik ga akkoord")
+            options=("Ik ga niet akkoord", "Ik ga akkoord")
         )
 
         if st.button("Submit Consent"):
-            if consent == "I agree":
+            if consent == "Ik ga akkoord":
                 submit_consent(study_information, informed_consent, name, informed_consent_pdf_path)
 
                 print("consent given")
@@ -160,7 +160,7 @@ else:
 
         feedback_1 = st.radio(
             "",
-            ("Volledig vermist", "Nauwelijks correct", "Grotendeels correct", "Volledig correct")
+            ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
         )
 
         st.markdown(

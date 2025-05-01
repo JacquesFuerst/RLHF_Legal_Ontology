@@ -10,7 +10,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-knowledge_base_file = '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/text/participatiewet_txt_converted-15-17.pdf'
+# load the relevant devices available on the server
+os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
+
+# Enable expandable CUDA segments
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+# knowledge_base_file = '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/text/participatiewet_txt_converted-15-17.pdf'
 
 prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': False}
 
@@ -21,7 +27,8 @@ llm, tokenizer = generator.load_llm_and_tokenizer()
 
 # load embedding model
 
-embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embedding model name from environment variables
+# embed_func = EmbeddingModel(os.getenv("EMBEDDING_MODEL_NAME"))  # Load the embedding model name from environment variables
+embed_func = None
 
 # docs = extract_text(knowledge_base_file)
 

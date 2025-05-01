@@ -2,6 +2,7 @@ from langchain_chroma import Chroma
 import os
 import torch
 from dotenv import load_dotenv
+import fitz
 
 
 # Load environment variables from .env file
@@ -41,3 +42,21 @@ def retrieve_chunks(query, embed_func):
     #TODO: print similarity scores for documents to get insight into the retrieval process
 
     return chunks
+
+def get_whole_doc():
+    """
+    Retrieve the whole reduced document to reduce memory usage whilst loading the document.
+    """
+
+    # Open the PDF document
+    doc = fitz.open(os.getenv("RAG_KB_PATH"))
+
+    # Extract and concatenate text from all pages
+    all_text = ""
+    for page in doc:
+        all_text += page.get_text()
+
+    # Optionally, close the document
+    doc.close()
+
+    return all_text

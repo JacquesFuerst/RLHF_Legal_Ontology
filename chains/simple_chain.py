@@ -1,5 +1,5 @@
 
-from chains.retriever import retrieve_chunks
+from chains.retriever import retrieve_chunks, get_whole_doc
 
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -169,22 +169,34 @@ def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
         str: The context in which the response was generated
         """
         
-        retrieved_chunks = retrieve_chunks(query, embed_func)
+        # retrieved_chunks = retrieve_chunks(query, embed_func)
 
         # print(f"Retrieved chunks: {retrieved_chunks}")
         
         # extract chunk_page content attribute from each chunk
         
         #, similarity score {chunk[1]}
-        context = "\n".join([f"Pagina {chunk[0].metadata['paginanummer']}: {chunk[0].page_content}" for chunk in retrieved_chunks])
+        # context = "\n".join([f"Pagina {chunk[0].metadata['paginanummer']}: {chunk[0].page_content}" for chunk in retrieved_chunks])
+
+        # get the whole document to reduce memory usage 
+        context = get_whole_doc()
 
         # Generate the prompt using the query and context
         prompt = generate_prompt(query, context, prompt_conditions)
 
+        print("Prompt: ", prompt)
+
         # print(f"Prompt: {prompt}")
+        # Ensure the tokenizer has a padding token
+        if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+
+
+        # prompt = "What is the captial of France?" 
+
+        # print(llm.device)
 
         # Tokenize the prompt
-        # with torch.no_grad():
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, padding=True).to(llm.device)
 
         # print(f"Prompt tokens: {inputs['input_ids'].shape[1]}")
@@ -196,9 +208,11 @@ def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
 
         # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
         start = time.time()
+
+        print("Everything up until here is done")
         
         with torch.no_grad():
-                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=10000)
+                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=4096)
         print("⏱ Time taken:", time.time() - start)
 
         print("Generated IDs:", generated_ids)
@@ -214,7 +228,7 @@ def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
 
         # print("response: ", answer)
 
-        return answer, retrieved_chunks
+        return answer #retrieved_chunks
 
 
 
