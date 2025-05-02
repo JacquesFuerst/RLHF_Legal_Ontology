@@ -19,13 +19,15 @@ os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
 
 torch.manual_seed(42)
 
-def generate_prompt(query, context, prompt_conditions):
+def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
         """
         Generate the prompt for the RAG based on the query. For now, this is a format for the toy data.
 
         Parameters:
         query (str): The query for the RAG
         context (str): The context in which the query is asked
+        prompt_conditions (dict): The conditions for the prompt, including whether to include examples and chain of thought
+        number_preconditions (int): The number of preconditions to find, default is 0 to prevent always including this
 
         Returns:
         str: The generated prompt
@@ -41,11 +43,10 @@ def generate_prompt(query, context, prompt_conditions):
 
                                 --- Gedachteketen ---
 
-                                TODO: update once Jeroen has answered you!!!
-
                                 1. Zoek alle vermeldingen van de act in de tekst.
-                                2. Zoek in de artikelen waarin de act wordt genoemd naar specifieke precondities voor de act.
-                                3. Extraheer de precondities en hun positie in de tekst.
+                                2. Zoek in de artikelen waarin de act wordt genoemd naar specifieke precondities voor de act. 
+                                3. Zoek ook naar specifieke verwijzingen naar andere artikelen waarin mogelijk andere predcondities voor de act worden genoemd.
+                                4. Extraheer de precondities en hun positie in de tekst.
 
                                 """
         
@@ -69,6 +70,14 @@ def generate_prompt(query, context, prompt_conditions):
                                         a) Er bestaat een 3x3 rooster.
                                         b) Alle vierkanten van het rooster zijn leeg.
                         """
+        
+
+        number_of_preconditions_string = f"""
+
+                                --- Aantal precondities ---
+                                
+                                Het aantal precondities dat je moet vinden is: {number_preconditions}.
+                                """
 
         prompt = f"""
 
@@ -81,6 +90,8 @@ def generate_prompt(query, context, prompt_conditions):
                 {examples_string if include_examples else ""}
 
                 {chain_of_thought_string if include_chain_of_thought else ""}
+
+                {number_of_preconditions_string if number_preconditions > 0 else ""}
                 
                 --- Opdracht ---
 
@@ -92,7 +103,7 @@ def generate_prompt(query, context, prompt_conditions):
 
                 Geef het antwoord in het volgende formaat, voor iedere preconditie die je kan vinden: \n \n
                 Preconditie: <preconditie> \n \n
-                Positie: Pagina <paginanummer>, Artikel <artikelnummer>, Sectie <sectienummer> \n \n
+                Positie: Artikel <artikelnummer>, Sectie <sectienummer> \n \n
                 """
         
 
@@ -156,7 +167,7 @@ def generate_prompt(query, context, prompt_conditions):
         return prompt
 
 
-def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
+def get_rag_response(query, llm, tokenizer, embed_func, number_preconditions=0, prompt_conditions=None):
         """
         Get the response from the RAG based on the query. 
         Retrieve the chunks, load the LLM, and se the context.
@@ -182,9 +193,11 @@ def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
         context = get_whole_doc()
 
         # Generate the prompt using the query and context
-        prompt = generate_prompt(query, context, prompt_conditions)
+        prompt = generate_prompt(query, context, prompt_conditions, number_preconditions=number_preconditions)
 
         print("Prompt: ", prompt)
+
+
 
         # print(f"Prompt: {prompt}")
         # Ensure the tokenizer has a padding token
@@ -199,23 +212,19 @@ def get_rag_response(query, llm, tokenizer, embed_func, prompt_conditions=None):
         # Tokenize the prompt
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, padding=True).to(llm.device)
 
-        # print(f"Prompt tokens: {inputs['input_ids'].shape[1]}")
-
-        # print(inputs["input_ids"].shape)
-        # print(inputs["attention_mask"].shape)
-
-        # print("LLM device: ", llm.device)
-
         # Generate the response using the LLM --> do sample leads to more creative outputs since we are sampling from prob dist next token
         start = time.time()
 
-        print("Everything up until here is done")
+        # print("Everything up until here is done")
+
+        #limit number of new tokens to number of preconditions * 150 to prevent hallucinations
+        max_new_tokens = number_preconditions * 150
         
         with torch.no_grad():
-                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=4096)
+                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=max_new_tokens)
         print("⏱ Time taken:", time.time() - start)
 
-        print("Generated IDs:", generated_ids)
+        # print("Generated IDs:", generated_ids)
 
 
         # Exclude the prompt from the output

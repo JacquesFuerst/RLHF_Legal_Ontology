@@ -1,0 +1,15 @@
+[
+    {
+        "file": "Interpretatie_Vw_over_besluiten_op_aanvragen_voor_een_verblijfsvergunning_regulier_bepaalde_tijd.json",
+        "ID": "767bd019-d22d-46fe-b50f-bf033cacd7fc",
+        "text": "inwilligen aanvraag van vreemdeling tot het verlenen van een reguliere verblijfsvergunning voor bepaalde tijd door Onze Minister van Veiligheid en Justitie",
+        "precondition_texts": {
+            "4bc1a4da-3948-46aa-a8a5-392f9ab86522": "de verblijfsvergunning wordt verleend met ingang van de dag waarop de vreemdeling heeft aangetoond dat hij aan alle voorwaarden voldoet",
+            "f4cd5c2a-3e67-4a47-8b83-786f7d214add": "de verblijfsvergunning wordt verleend met ingang van een dag eerder dan de dag waarop de aanvraag is ontvangen"
+        },
+        "text_positions": {
+            "4bc1a4da-3948-46aa-a8a5-392f9ab86522": "Artikel 26, sectie 1",
+            "f4cd5c2a-3e67-4a47-8b83-786f7d214add": "Artikel 26, sectie 1"
+        },
+        "responses": {
+            

@@ -32,6 +32,6 @@ embed_func = None
 
 # docs = extract_text(knowledge_base_file)
 
-response_1 = get_rag_response('weigeren recht op algemene bijstand', llm, tokenizer, embed_func, prompt_conditions_1)
+response_1 = get_rag_response('belanghebbende meldt zich bij UWV met verzoek een besluit te nemen over diens recht op algemene bijstand', llm, tokenizer, embed_func, prompt_conditions_1)
 
 print(response_1)
