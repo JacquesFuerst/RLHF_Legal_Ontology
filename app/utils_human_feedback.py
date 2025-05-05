@@ -56,19 +56,47 @@ def submit_consent(study_information_text, informed_consent_text, name, informed
 def next_page():
     st.session_state.page += 1
 
+    # Function to navigate to the next page
+def next_page_2():
+    st.session_state.page_2 += 1
+
 
 # Function to navigate to the previous page
 def prev_page():
     st.session_state.page -= 1
 
+    # Function to navigate to the previous page
+def prev_page_2():
+    st.session_state.page_2 -= 1
+
 
 
 # Function to handle feedback submission
-def submit_feedback(feedback_1, feedback_2, data, unique_id):
-    current_index = st.session_state.current_index
-    data[current_index]['feedback_extraction'] = feedback_1
-    data[current_index]['feedback_detection'] = feedback_2
+def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt_configs, feedback_additional_content=None):
+    """
     
+
+    """
+    # Get all relevant indices for storing the feedback
+    current_index = st.session_state.current_index
+    current_preconditon_index = st.session_state.current_precondition_index
+    current_prompt_config_index = st.session_state.current_prompt_config_index
+    current_response_index = st.session_state.current_response_index
+
+    current_precond = precond_ids[current_preconditon_index]
+    current_prompt_config = prompt_configs[current_prompt_config_index]
+
+    # Store the feedback with the proper precondition id, answer ID and prompt config ID
+    # if feedback is given on additional content, store it in the feedback_additional_content field
+    # if feedback_additional_content:
+    #     data[current_index]['feedback_additional_content'].setfdefault(f"Prompt_config: {current_prompt_config}, answer_id: {current_response_index}", "").append(feedback_additional_content)
+    # else:
+
+    # store the feedback as needed
+    print(f"keys in data: {data[current_index].keys()}")
+    data[current_index]['feedback_extraction'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_1 
+    data[current_index]['feedback_detection'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_2
+
     # Define the CSV file path
     csv_file_path = os.getenv('HUMAN_FEEDBACK_CSV') + f'_{unique_id}.csv'
     
@@ -86,7 +114,41 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id):
         # Write the data
         writer.writerow(data[current_index])
     
-    st.session_state.current_index += 1
+
+    # update all the indices in the correct order
+    if st.session_state.current_precondition_index < len(precond_ids) - 1:
+        print("We ")
+        st.session_state.current_precondition_index += 1
+
+    # elif st.session_state.current_response_index < 1 and not st.session_state.additional_content:
+    #     st.session_state.additional_content = True
+    
+    elif st.session_state.current_response_index < 1: # and st.session_state.additional_content:
+        # if the precondition index is at the end, reset it to 0
+        # and increase the response index
+        st.session_state.current_precondition_index = 0
+        # st.session_state.additional_content = False
+        st.session_state.current_response_index += 1
+
+    elif st.session_state.current_prompt_config_index < len(prompt_configs) - 1:  
+        # if the response index is at the end, reset it to 0
+        # and increase the prompt config index
+        st.session_state.current_response_index = 0
+        st.session_state.current_precondition_index = 0
+        st.session_state.current_prompt_config_index += 1
+
+    else:
+        # if the prompt config index is at the end, reset it to 0
+        # and increase the data index
+        # if the additional content is given, reset the data index
+        st.session_state.current_response_index = 0
+        st.session_state.current_precondition_index = 0
+        st.session_state.current_prompt_config_index = 0
+        st.session_state.current_index += 1
+        # st.session_state.additional_content = False
+        
+
+
 
 
 

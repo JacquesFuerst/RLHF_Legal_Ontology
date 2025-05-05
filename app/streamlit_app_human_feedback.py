@@ -9,7 +9,7 @@ from app.json_handling import read_json
 import streamlit as st
 import uuid
 
-from app.utils_human_feedback import submit_consent, next_page, prev_page, submit_feedback, load_html
+from app.utils_human_feedback import submit_consent, next_page, prev_page, next_page_2, prev_page_2, submit_feedback, load_html
 
 from dotenv import load_dotenv
 
@@ -27,9 +27,28 @@ if 'unique_id' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = 1
 
-# Initialize session state
+if 'page_2' not in st.session_state:
+    st.session_state.page_2 = 2 # be on page 2 by default since this is the feedback page
+
+# Initialize current data index
 if 'current_index' not in st.session_state:
     st.session_state.current_index = 0
+
+# Initialize current precondition index
+if 'current_precondition_index' not in st.session_state:
+    st.session_state.current_precondition_index = 0
+
+#initialize current response index
+if 'current_response_index' not in st.session_state:
+    st.session_state.current_response_index = 0
+
+if 'current_prompt_config_index' not in st.session_state:
+    st.session_state.current_prompt_config_index = 0
+
+if 'additional_content' not in st.session_state:
+    st.session_state.additional_content = False
+
+# Check if the consent has been given
 if 'consent_given' not in st.session_state:
     st.session_state.consent_given = False
 
@@ -55,13 +74,13 @@ study_information = load_html(os.getenv('STUDY_INFORMATION_HTML_PATH'), hours, n
 
 
 # Load the JSON file
-data = read_json(os.getenv('QUERYS_AND_RESPONSES'))
+data = read_json(os.getenv('MODEL_ANSWERS'))
 
 # informed consent pdf path
 informed_consent_pdf_path = os.getenv('INFORMED_CONSENT_STORAGE_PATH') + f'_{unique_id}.pdf'
 
 # the ground truth
-ground_truth = "NEEDS TO BE ADDED SOON"
+# ground_truth = read_json(os.gentenv('GROUND_TRUTH'))
 
 ##################################################################################################################################################
 
@@ -128,54 +147,124 @@ if not st.session_state.consent_given:
     
     
 else:
+
     # Get the current question and answer
     current_index = st.session_state.current_index
+
+    # Get the current precondition index
+    current_precondition_index = st.session_state.current_precondition_index
+
+    # Get the current prompt config index
+    current_prompt_config_index = st.session_state.current_prompt_config_index
+
+    # Get the current response index
+    current_response_index = st.session_state.current_response_index
+
     if current_index < len(data):
-        question = data[current_index].get('query')
-        answer = data[current_index].get('answer')
 
-        #Display the definition of and action and a precondition
-        st.markdown(definitions, unsafe_allow_html=True)
-
-        # Display the question and answer
-        st.markdown(f"""
-                    ### **Query:** 
-                     {question}""")
-        st.write(f"""
-                    ### **Antwoord:** 
-                     {answer}""")
         
-        st.write(f"""
-                    ### **Ground Truth:**
-                    {ground_truth}
-        """)
+        print("Data keys: ", data[current_index].keys())
 
-        # Create Likert scales for feedback
+        #TODO: somehow make sure that you iterate over the answers and for each answer the preconditions and their locaions...
+        # need to set this in streamlit session state??
+        frame = data[current_index].get('text')
+        responses_dict = data[current_index].get('responses')
+        precondition_text_dict = data[current_index].get('precondition_texts')
+        precondition_position_dict = data[current_index].get('text_positions')
 
-        #TODO: add proper questions and change radion button labels
+        precond_ids = list(precondition_text_dict.keys())
+        precondition_id = precond_ids[current_precondition_index]
+        precondition_text = precondition_text_dict[precondition_id]
+        precondition_position = precondition_position_dict[precondition_id]
+
+        prompt_configs = list(responses_dict.keys())
+        prompt_config_id = prompt_configs[st.session_state.current_prompt_config_index]
+        responses = responses_dict[prompt_config_id]
+
+        # TODO: get both answers, iterate over them
+        current_response = responses[current_response_index]
+
+
+
+        if st.session_state.page_2 == 2:
+            print("We are on page 2")
+            # Button to navigate back to the study information page
+            if st.button("⬅️ Definities"):
+                prev_page_2()
+                st.rerun()
+
+
+            print(f"current indices: act: {current_index}, precond: {current_precondition_index}, response: {current_response_index}, prompt_config: {st.session_state.current_prompt_config_index}")
+            # display act/fact and the answer, also theground truth for the preocndition
+            if data[current_index].get('type') == 'act':
+                
+                st.markdown(f"""
+                            ### **Act:** 
+                            {frame}""")
+            else:
+                st.markdown(f"""
+                            ### **Fact:** 
+                            {frame}""")
+
+            st.write(f"""
+                        ### **Antwoord:** 
+                        {current_response}""")
+            if data[current_index].get('type') == 'act':
+                st.write(f"""
+                            ### **Ground Truth:**
+                        
+                            Preconditie tekst: {precondition_text} \n
+                            Preconditie positie: {precondition_position} \n
+                """)
+            else:
+                st.write(f"""
+                            ### **Ground Truth:**
+                        
+                            Subfact tekst: {precondition_text} \n
+                            Subfact positie: {precondition_position} \n
+                """)
+
+            #TODO: somehow collect  additional feedback here, but how to do this? How would participants know what part of the answer is additional?
+            # maybe ask about how they would rate the quality of the answer overall (how concise it is and how complete???)
+
+            # Create Likert scales for feedback
+            st.markdown(
+                "### In welke mate is de preconditie door het model geëxtraheerd?"
+            )
+
+            feedback_1 = st.radio(
+                "",
+                ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
+            )
+
+            st.markdown(
+                "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
+            )
+
+            feedback_2 = st.radio(
+                "",
+                ("Onbestemde positie in ground truth","Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
+            )
+
+            # Save the feedback and move to the next question
+            if st.button("Submit Feedback"):
+                #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
+                # maybe get precondition keys ads list and keep index within that list...
+                # also change response index 
+                submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt_configs)
+                print("feedback given")
+                st.rerun()  # Trigger a refresh
         
-        st.markdown(
-            "### In welke mate is de preconditie door het model geëxtraheerd?"
-        )
+        elif st.session_state.page_2 == 1:
+            print("We are on page 8")
+            # Button to navigate back to the study information page
+            if st.button("Feedback geven ➡️"):
+                next_page_2()
+                st.rerun()
 
-        feedback_1 = st.radio(
-            "",
-            ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
-        )
+            #Display the definition of and action and a precondition
+            st.markdown(definitions, unsafe_allow_html=True)
 
-        st.markdown(
-            "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
-        )
-
-        feedback_2 = st.radio(
-            "",
-            ("Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
-        )
-
-        # Save the feedback and move to the next question
-        if st.button("Submit Feedback"):
-            submit_feedback(feedback_1, feedback_2, data, unique_id)
-            print("feedback given")
-            st.rerun()  # Trigger a refresh
+        
     else:
         st.write("Je hebt alle vragen geëvalueerd. Hartelijk dank voor je feedback!")

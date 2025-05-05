@@ -19,7 +19,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("AVAILABLE_DEVICES")
 
 torch.manual_seed(42)
 
-def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
+def generate_prompt_act(query, context, prompt_conditions, number_preconditions=0):
         """
         Generate the prompt for the RAG based on the query. For now, this is a format for the toy data.
 
@@ -39,7 +39,7 @@ def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
 
         
 
-        chain_of_thought_string = """
+        chain_of_thought_string_act = """
 
                                 --- Gedachteketen ---
 
@@ -51,7 +51,7 @@ def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
                                 """
         
 
-        examples_string = """
+        examples_string_act = """
 
                                 --- Voorbeelden ---
 
@@ -69,15 +69,17 @@ def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
                                 Precondities:
                                         a) Er bestaat een 3x3 rooster.
                                         b) Alle vierkanten van het rooster zijn leeg.
+
                         """
         
 
-        number_of_preconditions_string = f"""
+        number_of_preconditions_string_act = f"""
 
                                 --- Aantal precondities ---
                                 
                                 Het aantal precondities dat je moet vinden is: {number_preconditions}.
                                 """
+
 
         prompt = f"""
 
@@ -86,26 +88,119 @@ def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
 
                 Preconditie: Een preconditie beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd.
                 Act: Een act kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.
+                Fact: Fact frames beschrijven zaken waarvan de aanwezigheid of waarheidswaarde de toestand van het normatieve systeem kenmerkt. 
 
-                {examples_string if include_examples else ""}
+                {examples_string_act if include_examples else ""}
 
-                {chain_of_thought_string if include_chain_of_thought else ""}
+                {chain_of_thought_string_act if include_chain_of_thought else ""}
 
-                {number_of_preconditions_string if number_preconditions > 0 else ""}
+                {number_of_preconditions_string_act if number_preconditions > 0 else ""}
                 
                 --- Opdracht ---
 
                 Gebruik de volgende context: \n {context} \n \n 
                 
-                Query: Vind alle precondities voor de volgende act in de tekst: {query}. Toon voor elke preconditie de inhoud en de positie ervan in de wetstekst \n \n
+                Query: Vind alle precondities voor de volgende act in de tekst: {query}. Toon voor elke preconditie de inhoud en de positie ervan in de wetstekst en de naam van de wet/ wettelijke tekst waar de preconditie staat. \n \n
 
                 --- Antwoord ---
 
                 Geef het antwoord in het volgende formaat, voor iedere preconditie die je kan vinden: \n \n
                 Preconditie: <preconditie> \n \n
-                Positie: Artikel <artikelnummer>, Sectie <sectienummer> \n \n
+                Positie: Artikel <artikelnummer>, sectie <sectienummer> IN <wetstekst> \n \n
                 """
+        return prompt
+
+
+def generate_prompt_fact(query, context, prompt_conditions, number_preconditions=0):
+        """
+        Generate the prompt for the RAG based on the query. For now, this is a format for the toy data.
+
+        Parameters:
+        query (str): The query for the RAG
+        context (str): The context in which the query is asked
+        prompt_conditions (dict): The conditions for the prompt, including whether to include examples and chain of thought
+        number_preconditions (int): The number of preconditions to find, default is 0 to prevent always including this
+
+        Returns:
+        str: The generated prompt
+        """
+        # set the boolean variables for what to include in the prompt
+
+        include_examples = prompt_conditions['include_examples']
+        include_chain_of_thought = prompt_conditions['include_chain_of_thought']
+
         
+
+        chain_of_thought_string_fact = """
+
+                                --- Gedachteketen ---
+
+                                1. Zoek alle vermeldingen van de fact in de tekst.
+                                2. Zoek in de artikelen waarin de fact wordt genoemd naar specifieke subfacts voor de fact. 
+                                3. Zoek ook naar specifieke verwijzingen naar andere artikelen waarin mogelijk andere subfacts voor de fact worden genoemd.
+                                4. Extraheer de subfacts en hun positie in de tekst.
+
+                                """
+        
+
+        examples_string_fact = """
+
+                                --- Voorbeelden (Mens-erger-je-niet) ---
+
+                                Voorbeeld 1: 
+
+                                Fact: Een pion van een speler staat op het bord.
+                                Subfacts: 
+                                        a) NOT De pion is in het startvak.
+                                        b) De speler heeft een zes gegooid.
+
+
+                                Voorbeeld 2:
+
+                                Fact: Een pion mag verplaatst worden naar het eindvak.
+                                Subfacts:
+                                        a) De pion bevindt zich op de laatste rij vóór het eindvak.
+                                        b) De speler gooit precies het aantal ogen dat nodig is om het eindvak te bereiken.
+
+                        """
+        
+
+        number_of_preconditions_string_fact = f"""
+
+                                --- Aantal Subfacts ---
+                                
+                                Het aantal subfacts dat je moet vinden is: {number_preconditions}.
+                                """
+
+
+        prompt = f"""
+
+
+                --- Definitie ---
+
+                Preconditie: Een preconditie beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd.
+                Act: Een act kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.
+                Fact: Fact frames beschrijven zaken waarvan de aanwezigheid of waarheidswaarde de toestand van het normatieve systeem kenmerkt. 
+
+                {examples_string_fact if include_examples else ""}
+
+                {chain_of_thought_string_fact if include_chain_of_thought else ""}
+
+                {number_of_preconditions_string_fact if number_preconditions > 0 else ""}
+                
+                --- Opdracht ---
+
+                Gebruik de volgende context: \n {context} \n \n 
+                
+                Query: Vind alle aubfacts voor de volgende fact in de tekst: {query}. Toon voor elke subfact de inhoud en de positie ervan in de wetstekst en de naam van de wet/ wettelijke tekst waar de subfact staat. \n \n
+
+                --- Antwoord ---
+
+                Geef het antwoord in het volgende formaat, voor iedere subfact die je kan vinden: \n \n
+                Subfact: <subfact> \n \n
+                Positie: Artikel <artikelnummer>, sectie <sectienummer> IN <wetstekst> \n \n
+                """
+        return prompt
 
         # chain_of_thought_string = """
 
@@ -164,10 +259,10 @@ def generate_prompt(query, context, prompt_conditions, number_preconditions=0):
 
         #         Do not return the prompt, only the answer! \n \n
         #          """
-        return prompt
+        
 
 
-def get_rag_response(query, llm, tokenizer, embed_func, number_preconditions=0, prompt_conditions=None):
+def get_rag_response(query, llm, tokenizer, embed_func, act=True, number_preconditions=0, prompt_conditions=None):
         """
         Get the response from the RAG based on the query. 
         Retrieve the chunks, load the LLM, and se the context.
@@ -193,7 +288,10 @@ def get_rag_response(query, llm, tokenizer, embed_func, number_preconditions=0, 
         context = get_whole_doc()
 
         # Generate the prompt using the query and context
-        prompt = generate_prompt(query, context, prompt_conditions, number_preconditions=number_preconditions)
+        if act:
+                prompt = generate_prompt_act(query, context, prompt_conditions, number_preconditions=number_preconditions)
+        else:
+                prompt = generate_prompt_fact(query, context, prompt_conditions, number_preconditions=number_preconditions)
 
         print("Prompt: ", prompt)
 

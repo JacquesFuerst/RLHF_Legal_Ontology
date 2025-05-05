@@ -84,7 +84,7 @@ def generate_answers(ground_truth_file, knowledge_base_file):
 
 
 ground_truth_file = os.getenv("GROUND_TRUTH_FILE")
-knowledge_base_file = os.getenv("KNOWLEDGE_BASE_FILE")
+knowledge_base_file = os.getenv("RAG_KB_PATH")
 
 generate_answers(ground_truth_file, knowledge_base_file)
 
