@@ -10,6 +10,8 @@ from weasyprint import HTML, CSS
 
 from dotenv import load_dotenv
 
+import ast
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -86,6 +88,13 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
     current_precond = precond_ids[current_preconditon_index]
     current_prompt_config = prompt_configs[current_prompt_config_index]
 
+    # Convert string to actual tuple
+    parsed = ast.literal_eval(current_prompt_config)
+
+    # Get the first value
+    config_examples = parsed[0]
+    config_chain_of_thought = parsed[1]
+
     # Store the feedback with the proper precondition id, answer ID and prompt config ID
     # if feedback is given on additional content, store it in the feedback_additional_content field
     # if feedback_additional_content:
@@ -104,15 +113,44 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
     file_exists = os.path.isfile(csv_file_path)
     
     # Open the CSV file in append mode
+    field_names = ['file', 
+                   'frame_ID', 
+                   'frame_type', 
+                   'frame_text', 
+                   'precondition_id', 
+                   'precondition_text', 
+                   'precondition_position', 
+                   'response_text', 
+                   'prompt_config_examples', 
+                   'prompt_config_chain_of_thought', 
+                   'feedback_extraction', 
+                   'feedback_detection'
+    ]
+    
+    row = {
+        'file': data[current_index]['file'], 
+        'frame_ID': data[current_index]['ID'], 
+        'frame_type': data[current_index]['type'],
+        'frame_text': data[current_index]['text'], 
+        'precondition_id': current_precond,
+        'precondition_text': data[current_index]['precondition_texts'][current_precond],
+        'precondition_position': data[current_index]['text_positions'][current_precond],
+        'response_text': data[current_index]['responses'][current_prompt_config][current_response_index],
+        'prompt_config_examples': config_examples[1],
+        'prompt_config_chain_of_thought': config_chain_of_thought[1],
+        'feedback_extraction': feedback_1,
+        'feedback_detection':feedback_2
+    }
+    
     with open(csv_file_path, mode='a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=data[current_index].keys(), delimiter=';')
+        writer = csv.DictWriter(file, fieldnames=field_names, delimiter=';')
         
         # Write the header only if the file does not exist
         if not file_exists:
             writer.writeheader()
         
         # Write the data
-        writer.writerow(data[current_index])
+        writer.writerow(row)
     
 
     # update all the indices in the correct order

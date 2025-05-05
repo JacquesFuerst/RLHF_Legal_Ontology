@@ -205,10 +205,15 @@ else:
                 st.markdown(f"""
                             ### **Fact:** 
                             {frame}""")
+                
+            st.markdown("### **Antwoord:**")
 
-            st.write(f"""
-                        ### **Antwoord:** 
-                        {current_response}""")
+            st.markdown(f"""
+                        <div style="white-space: normal; word-wrap: break-word;">
+                            {"  " + current_response}
+                        </div>
+                        """, unsafe_allow_html=True)
+
             if data[current_index].get('type') == 'act':
                 st.write(f"""
                             ### **Ground Truth:**

@@ -1,9 +1,17 @@
+import os
+import sys
+# from embeddings.data_extraction import extract_text
+# from embeddings.vector_store import store_embeddings
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
 from chains.simple_chain import get_rag_response
 from embeddings.data_extraction import extract_text
 from embeddings.vector_store import store_embeddings
 from models.huggingface.generator import Generator
 from models.huggingface.embedding_model import EmbeddingModel
-import os
 
 from dotenv import load_dotenv
 
@@ -18,7 +26,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 # knowledge_base_file = '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/text/participatiewet_txt_converted-15-17.pdf'
 
-prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': False}
+prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': True}
 
 # load LLM and tokenizer
 
@@ -32,6 +40,6 @@ embed_func = None
 
 # docs = extract_text(knowledge_base_file)
 
-response_1 = get_rag_response('belanghebbende meldt zich bij UWV met verzoek een besluit te nemen over diens recht op algemene bijstand', llm, tokenizer, embed_func, prompt_conditions_1)
+response_1 = get_rag_response('de aanvrager heeft voldaan aan alle wettelijk voorschriften voor het in behandeling nemen van de aanvraag', llm, tokenizer, embed_func, act=False, number_preconditions=3, prompt_conditions=prompt_conditions_1)
 
 print(response_1)
