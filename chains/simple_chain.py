@@ -291,6 +291,7 @@ def get_rag_response(query, llm, tokenizer, embed_func, act=True, number_precond
         if act:
                 prompt = generate_prompt_act(query, context, prompt_conditions, number_preconditions=number_preconditions)
         else:
+                print("Fact prompt")
                 prompt = generate_prompt_fact(query, context, prompt_conditions, number_preconditions=number_preconditions)
 
         print("Prompt: ", prompt)

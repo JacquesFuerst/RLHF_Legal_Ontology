@@ -82,6 +82,7 @@ informed_consent_pdf_path = os.getenv('INFORMED_CONSENT_STORAGE_PATH') + f'_{uni
 # the ground truth
 # ground_truth = read_json(os.gentenv('GROUND_TRUTH'))
 
+
 ##################################################################################################################################################
 
 
@@ -138,10 +139,10 @@ if not st.session_state.consent_given:
             if consent == "Ik ga akkoord":
                 submit_consent(study_information, informed_consent, name, informed_consent_pdf_path)
 
-                print("consent given")
+                print("consent gegeven")
                 st.rerun()  # Trigger a refresh
             else:
-                st.write("Please provide your consent to proceed.")
+                st.write("Geef consent om door te gaan.")
 
         
     
@@ -185,6 +186,21 @@ else:
         current_response = responses[current_response_index]
 
 
+        # Inject CSS to prevent scrolling
+        st.markdown("""
+            <style>
+            .no-scroll {
+                
+                white-space: pre-wrap;  /* Wraps text */
+                word-wrap: break-word;  /* Breaks long words */
+                overflow-wrap: break-word;   /* Ensures wrapping in all browsers */
+                overflow: visible !important;
+
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+
 
         if st.session_state.page_2 == 2:
             print("We are on page 2")
@@ -208,11 +224,14 @@ else:
                 
             st.markdown("### **Antwoord:**")
 
-            st.markdown(f"""
-                        <div style="white-space: normal; word-wrap: break-word;">
-                            {"  " + current_response}
-                        </div>
-                        """, unsafe_allow_html=True)
+            # html_text = answer_text.replace('\n', '<br>')
+
+            answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">{current_response}</div>"""
+
+            # replace new line characters with <br> tags for HTML rendering
+            html_text = answer_text.replace('\n', '<br>')
+
+            st.markdown(html_text, unsafe_allow_html=True)
 
             if data[current_index].get('type') == 'act':
                 st.write(f"""

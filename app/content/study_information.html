@@ -15,10 +15,11 @@
 
 <h3><strong>Definities:</strong></h3>
 <div class="info-section">
-    <p>Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven voor het extraheren van precondities uit een tekst op basis van de handeling die aan het model wordt gegeven. Daarom is het handig om een duidelijker idee te krijgen van wat deze termen impliceren:</p>
-    <p>Een handeling kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.</p>
-    <p>Een preconditie beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd. Als er een NOT voor de preconditie staat, moet de ontkende versie van de voorwaarde gelden om de actie geldig te laten zijn.</p>
-    <p>Een voorbeeld van een handeling in de context van een bibliotheek zou kunnen zijn: <em>'Persoon A leent een boek.'</em></p>
+    <p>Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven voor het extraheren van precondities of subfacts uit een tekst op basis van de act/fact die aan het model wordt gegeven. Daarom is het handig om een duidelijker idee te krijgen van wat deze termen impliceren:</p>
+    <p>Een <strong>act</strong> kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.</p>
+    <p>Een <strong>preconditie</strong> beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd. Als er een NOT voor de preconditie staat, moet de ontkende versie van de voorwaarde gelden om de actie geldig te laten zijn.</p>
+    <p>Een <strong>fact</strong> beschrijft een zaak waarvan de aanwezigheid of waarheidswaarde de toestand van het normatieve systeem kenmerkt.</p>
+    <p>Een voorbeeld van een act in de context van een bibliotheek zou kunnen zijn: <em>'Persoon A leent een boek.'</em></p>
     <p>De bijbehorende precondities zouden dan zijn:</p>
     <ul>
         <li>Een lid van de bibliotheek zijn</li>
@@ -28,8 +29,8 @@
 
 <h3><strong>Procedure:</strong></h3>
 <div class="procedure-text">
-    <p>Als u instemt met deelname, krijgt u <span id="number_of_pairs">{number_of_pairs}</span> paren van een handeling en de bijbehorende preconditie(s) te zien.</p>
-    <p>Voor elk van deze paren werd de handeling aan een taalmodel gegeven als onderdeel van een prompt en werd gevraagd om alle bijbehorende preconditie(s) en hun respectieve positie(s) in de tekst terug te geven.</p>
+    <p>Als u instemt met deelname, krijgt u <span id="number_of_pairs">{number_of_pairs}</span> paren van een act/fact en de bijbehorende subfact/preconditie(s) te zien.</p>
+    <p>Voor elk van deze paren werd de act/fact aan een taalmodel gegeven als onderdeel van een prompt en werd gevraagd om alle bijbehorende subfact/preconditie(s) en hun respectieve positie(s) in de tekst terug te geven.</p>
     <p>Het is uw taak om (op een 4-punt Likert-schaal) te evalueren hoe goed het model presteerde bij:</p>
     <ul>
         <li>a) het vinden van alle relevante precondities in de tekst</li>
@@ -37,7 +38,7 @@
     </ul>
     <p>U ontvangt het document waarin u de precondities kunt vinden en de precondities zelf, maar NIET hun werkelijke positie in de tekst.</p>
     <p>Voor het evalueren van onderdeel a) kunt u eenvoudig de precondities vergelijken die het model noemde met degene die aan u werden verstrekt (die de waarheid vertegenwoordigen).</p>
-    <p>b) is het uw taak om te zien of u de preconditie kunt vinden in het document met de informatie die u uit de prompt hebt gekregen en de prestaties van het taalmodel te evalueren op basis van hoe gemakkelijk het voor u was om deze te vinden.</p>
+    <p>b) is het uw taak om te zien of u de preconditie kunt vinden in het document met de informatie die u uit de prompt hebt gekregen en de prestaties van het taalmodel te evalueren op basis van hoe gemakkelijk het voor u was om deze te vinden. Soms werd de positie niet gegeven in de ground truth, dit kunt u ook aangeven in de feedback.</p>
     <p>Dit zal ongeveer <span id="hours">{hours}</span> uur duren.</p>
 </div>
 

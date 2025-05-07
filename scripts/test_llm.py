@@ -40,6 +40,6 @@ embed_func = None
 
 # docs = extract_text(knowledge_base_file)
 
-response_1 = get_rag_response('de aanvrager heeft voldaan aan alle wettelijk voorschriften voor het in behandeling nemen van de aanvraag', llm, tokenizer, embed_func, act=False, number_preconditions=3, prompt_conditions=prompt_conditions_1)
+response_1 = get_rag_response('de vreemdeling dan wel de persoon bij wie de vreemdeling wil verblijven, beschikt zelfstandig en duurzaam over voldoende middelen van bestaan', llm, tokenizer, embed_func, act=False, number_preconditions=2, prompt_conditions=prompt_conditions_1)
 
 print(response_1)
