@@ -39,13 +39,13 @@ def generate_answers(ground_truth_file, knowledge_base_file):
     generator = Generator(os.getenv("GENERATION_MODEL_NAME"))
     llm, tokenizer = generator.load_llm_and_tokenizer()
     embed_func = None
-    act_bool = False
+    act_bool = True
 
     model_answers = os.getenv("MODEL_ANSWERS")
     
 
     # Define prompt conditions for each answer
-    prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': True}
+    # prompt_conditions_1 = {'include_examples': True, 'include_chain_of_thought': True}
     prompt_conditions_3 = {'include_examples': False, 'include_chain_of_thought': True}
 
     with open(ground_truth_file, 'r') as file:
@@ -55,14 +55,13 @@ def generate_answers(ground_truth_file, knowledge_base_file):
 
         number_preconditions = len(act['precondition_texts']) # act=True, number_preconditions=0, prompt_conditions=None
         print(f"Number of preconditions: {number_preconditions}")
-        response_1_1 = get_rag_response(act['text'], llm, tokenizer, embed_func, act=act_bool, number_preconditions=number_preconditions, prompt_conditions=prompt_conditions_1)
-        print(f"Response 1_1: {response_1_1}")
         response_3_1 = get_rag_response(act['text'], llm, tokenizer, embed_func, act=act_bool, number_preconditions=number_preconditions, prompt_conditions=prompt_conditions_3)
-        print(f"Response 3_1: {response_3_1}")
+        print(f"Response 1_1: {response_3_1}")
+        response_3_2 = get_rag_response(act['text'], llm, tokenizer, embed_func, act=act_bool, number_preconditions=number_preconditions, prompt_conditions=prompt_conditions_3)
+        print(f"Response 1_2: {response_3_2}")
 
         # Store the responses in the act dictionary
-        act['responses'] = {str((tuple(prompt_conditions_1.items()))): [response_1_1],
-                            str((tuple(prompt_conditions_3.items()))): [response_3_1],
+        act['responses'] = {str((tuple(prompt_conditions_3.items()))): [response_3_1, response_3_2],
                             }
         
     with open(model_answers, 'w') as file:

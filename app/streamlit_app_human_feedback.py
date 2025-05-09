@@ -182,7 +182,7 @@ else:
         prompt_config_id = prompt_configs[st.session_state.current_prompt_config_index]
         responses = responses_dict[prompt_config_id]
 
-        # TODO: get both answers, iterate over them
+        # TODO: cahnge the way response index is handled here, need to get both answers for each fact/act
         current_response = responses[current_response_index]
 
 
@@ -210,7 +210,7 @@ else:
                 st.rerun()
 
 
-            print(f"current indices: act: {current_index}, precond: {current_precondition_index}, response: {current_response_index}, prompt_config: {st.session_state.current_prompt_config_index}")
+            print(f"current indices: act: {current_index}, precond: {current_precondition_index}, response: {current_response_index}, prompt_config: {st.session_state.current_prompt_config_index}, additional_content: {st.session_state.additional_content}")
             # display act/fact and the answer, also theground truth for the preocndition
             if data[current_index].get('type') == 'act':
                 
@@ -233,51 +233,80 @@ else:
 
             st.markdown(html_text, unsafe_allow_html=True)
 
-            if data[current_index].get('type') == 'act':
-                st.write(f"""
-                            ### **Ground Truth:**
-                        
-                            Preconditie tekst: {precondition_text} \n
-                            Preconditie positie: {precondition_position} \n
-                """)
-            else:
-                st.write(f"""
-                            ### **Ground Truth:**
-                        
-                            Subfact tekst: {precondition_text} \n
-                            Subfact positie: {precondition_position} \n
-                """)
+            if not st.session_state.additional_content:
+                # only display the ground truth if not getting additional feedback for the answer
+
+                if data[current_index].get('type') == 'act':
+                    st.write(f"""
+                                ### **Ground Truth:**
+                            
+                                Preconditie tekst: {precondition_text} \n
+                                Preconditie positie: {precondition_position} \n
+                    """)
+                else:
+                    st.write(f"""
+                                ### **Ground Truth:**
+                            
+                                Subfact tekst: {precondition_text} \n
+                                Subfact positie: {precondition_position} \n
+                    """)
 
             #TODO: somehow collect  additional feedback here, but how to do this? How would participants know what part of the answer is additional?
             # maybe ask about how they would rate the quality of the answer overall (how concise it is and how complete???)
 
-            # Create Likert scales for feedback
-            st.markdown(
-                "### In welke mate is de preconditie door het model geëxtraheerd?"
-            )
+            if st.session_state.additional_content:
 
-            feedback_1 = st.radio(
-                "",
-                ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
-            )
+                st.markdown(
+                    """
+                    
+                    #### In welke mate was de extra informatie naast de juiste randvoorwaarden/subfacten met betrekking tot het vinden van de randvoorwaarden en het nadenken over welke delen van de tekst goede randvoorwaarden zijn nuttig of verwarrend?
+                     
+                    """
+                )
 
-            st.markdown(
-                "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
-            )
+                feedback_additional_content = st.radio(
+                    "",
+                    ("Zeer nuttig", "een beetje nuttig", "een beetje verwarrend", "Zeer verwarrend")
+                )
 
-            feedback_2 = st.radio(
-                "",
-                ("Onbestemde positie in ground truth","Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
-            )
+                # Save the feedback and move to the next question
+                if st.button("Submit Feedback"):
+                    #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
+                    # maybe get precondition keys ads list and keep index within that list...
+                    # also change response index 
+                    submit_feedback(None, None, data, unique_id, precond_ids, prompt_configs, feedback_additional_content=feedback_additional_content)
+                    print(" extra feedback given")
+                    st.rerun()  # Trigger a refresh
+            
+            else:
 
-            # Save the feedback and move to the next question
-            if st.button("Submit Feedback"):
-                #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
-                # maybe get precondition keys ads list and keep index within that list...
-                # also change response index 
-                submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt_configs)
-                print("feedback given")
-                st.rerun()  # Trigger a refresh
+                # Create Likert scales for feedback
+                st.markdown(
+                    "### In welke mate is de preconditie door het model geëxtraheerd?"
+                )
+
+                feedback_1 = st.radio(
+                    "",
+                    ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
+                )
+
+                st.markdown(
+                    "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
+                )
+
+                feedback_2 = st.radio(
+                    "",
+                    ("Onbestemde positie in ground truth","Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
+                )
+
+                # Save the feedback and move to the next question
+                if st.button("Submit Feedback"):
+                    #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
+                    # maybe get precondition keys ads list and keep index within that list...
+                    # also change response index 
+                    submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt_configs)
+                    print("feedback given")
+                    st.rerun()  # Trigger a refresh
         
         elif st.session_state.page_2 == 1:
             print("We are on page 8")

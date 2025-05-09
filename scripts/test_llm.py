@@ -40,6 +40,9 @@ embed_func = None
 
 # docs = extract_text(knowledge_base_file)
 
-response_1 = get_rag_response('Begroting bevat begrotingsstaat', llm, tokenizer, embed_func, act=False, number_preconditions=2, prompt_conditions=prompt_conditions_1)
+response_1 = get_rag_response('De begrotingsstaat behorende bij de begroting van een niet-departementale begroting eventueel inclusief de agentschappen wordt volgens model 1.21 of model 1.22 opgesteld.', llm, tokenizer, embed_func, act=False, number_preconditions=2, prompt_conditions=prompt_conditions_1)
+response_2 = get_rag_response('De begrotingsstaat behorende bij de begroting van een niet-departementale begroting eventueel inclusief de agentschappen wordt volgens model 1.21 of model 1.22 opgesteld.', llm, tokenizer, embed_func, act=False, number_preconditions=2, prompt_conditions=prompt_conditions_1)
 
-print(response_1)
+
+print("Answer 1: ", response_1)
+print("Answer 2: ", response_2)

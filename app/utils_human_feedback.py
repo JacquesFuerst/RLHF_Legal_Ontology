@@ -95,16 +95,6 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
     config_examples = parsed[0]
     config_chain_of_thought = parsed[1]
 
-    # Store the feedback with the proper precondition id, answer ID and prompt config ID
-    # if feedback is given on additional content, store it in the feedback_additional_content field
-    # if feedback_additional_content:
-    #     data[current_index]['feedback_additional_content'].setfdefault(f"Prompt_config: {current_prompt_config}, answer_id: {current_response_index}", "").append(feedback_additional_content)
-    # else:
-
-    # store the feedback as needed
-    print(f"keys in data: {data[current_index].keys()}")
-    data[current_index]['feedback_extraction'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_1 
-    data[current_index]['feedback_detection'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_2
 
     # Define the CSV file path
     csv_file_path = os.getenv('HUMAN_FEEDBACK_CSV') + f'_{unique_id}.csv'
@@ -112,35 +102,73 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
     # Check if the CSV file already exists
     file_exists = os.path.isfile(csv_file_path)
     
-    # Open the CSV file in append mode
+    # Define the field names for the CSV file
     field_names = ['file', 
-                   'frame_ID', 
-                   'frame_type', 
-                   'frame_text', 
-                   'precondition_id', 
-                   'precondition_text', 
-                   'precondition_position', 
-                   'response_text', 
-                   'prompt_config_examples', 
-                   'prompt_config_chain_of_thought', 
-                   'feedback_extraction', 
-                   'feedback_detection'
+                'frame_ID', 
+                'frame_type', 
+                'frame_text', 
+                'precondition_id', 
+                'precondition_text', 
+                'precondition_position', 
+                'response_text', 
+                'prompt_config_examples', 
+                'prompt_config_chain_of_thought', 
+                'feedback_extraction', 
+                'feedback_detection', 
+                'additional_feedback'
     ]
-    
-    row = {
-        'file': data[current_index]['file'], 
-        'frame_ID': data[current_index]['ID'], 
-        'frame_type': data[current_index]['type'],
-        'frame_text': data[current_index]['text'], 
-        'precondition_id': current_precond,
-        'precondition_text': data[current_index]['precondition_texts'][current_precond],
-        'precondition_position': data[current_index]['text_positions'][current_precond],
-        'response_text': data[current_index]['responses'][current_prompt_config][current_response_index],
-        'prompt_config_examples': config_examples[1],
-        'prompt_config_chain_of_thought': config_chain_of_thought[1],
-        'feedback_extraction': feedback_1,
-        'feedback_detection':feedback_2
-    }
+
+
+    if st.session_state.additional_content:
+
+        # data[current_index]['feedback_additional_content'].setfdefault(f"Prompt_config: {current_prompt_config}, answer_id: {current_response_index}", "").append(feedback_additional_content)
+
+        row = {
+            'file': data[current_index]['file'], 
+            'frame_ID': data[current_index]['ID'], 
+            'frame_type': data[current_index]['type'],
+            'frame_text': data[current_index]['text'], 
+            'precondition_id': current_precond,
+            'precondition_text': data[current_index]['precondition_texts'][current_precond],
+            'precondition_position': data[current_index]['text_positions'][current_precond],
+            'response_text': data[current_index]['responses'][current_prompt_config][current_response_index],
+            'prompt_config_examples': config_examples[1],
+            'prompt_config_chain_of_thought': config_chain_of_thought[1],
+            'feedback_extraction': None,
+            'feedback_detection':None,
+            'additional_feedback': feedback_additional_content
+        }
+
+    else:
+
+
+    # Store the feedback with the proper precondition id, answer ID and prompt config ID
+    # if feedback is given on additional content, store it in the feedback_additional_content field
+    # if feedback_additional_content:
+    #     data[current_index]['feedback_additional_content'].setfdefault(f"Prompt_config: {current_prompt_config}, answer_id: {current_response_index}", "").append(feedback_additional_content)
+    # else:
+
+        # store the feedback as needed
+        print(f"keys in data: {data[current_index].keys()}")
+        # data[current_index]['feedback_extraction'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_1 
+        # data[current_index]['feedback_detection'][f"Precond_id: {current_precond}, Prompt_config: {current_prompt_config}, answer_id: {current_response_index}"] = feedback_2
+
+        
+        row = {
+            'file': data[current_index]['file'], 
+            'frame_ID': data[current_index]['ID'], 
+            'frame_type': data[current_index]['type'],
+            'frame_text': data[current_index]['text'], 
+            'precondition_id': current_precond,
+            'precondition_text': data[current_index]['precondition_texts'][current_precond],
+            'precondition_position': data[current_index]['text_positions'][current_precond],
+            'response_text': data[current_index]['responses'][current_prompt_config][current_response_index],
+            'prompt_config_examples': config_examples[1],
+            'prompt_config_chain_of_thought': config_chain_of_thought[1],
+            'feedback_extraction': feedback_1,
+            'feedback_detection':feedback_2,
+            'additional_feedback': None
+        }
     
     with open(csv_file_path, mode='a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=field_names, delimiter=';')
@@ -155,22 +183,28 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
 
     # update all the indices in the correct order
     if st.session_state.current_precondition_index < len(precond_ids) - 1:
+        # 1. go through all preconditions
         print("We ")
         st.session_state.current_precondition_index += 1
 
-    # elif st.session_state.current_response_index < 1 and not st.session_state.additional_content:
-    #     st.session_state.additional_content = True
+    #TODO: double check this, but using smaller than 2 atm since it is the number of repsonses
+    elif not st.session_state.additional_content:
+        print("We went through all preconditions for this response")
+        #2. display addditional question
+        st.session_state.additional_content = True
     
-    elif st.session_state.current_response_index < 1: # and st.session_state.additional_content:
-        # if the precondition index is at the end, reset it to 0
+    elif st.session_state.current_response_index < 1 and st.session_state.additional_content:
+        print("We collected additional feedback and go to the next response")
+        # if the precondition index is at the end and additional question has been asked, reset it to 0 and Flase
         # and increase the response index
         st.session_state.current_precondition_index = 0
-        # st.session_state.additional_content = False
+        st.session_state.additional_content = False
         st.session_state.current_response_index += 1
 
     elif st.session_state.current_prompt_config_index < len(prompt_configs) - 1:  
         # if the response index is at the end, reset it to 0
         # and increase the prompt config index
+        print("We got all responses for the prompt config and go to the next one")
         st.session_state.current_response_index = 0
         st.session_state.current_precondition_index = 0
         st.session_state.current_prompt_config_index += 1
@@ -183,7 +217,7 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
         st.session_state.current_precondition_index = 0
         st.session_state.current_prompt_config_index = 0
         st.session_state.current_index += 1
-        # st.session_state.additional_content = False
+        st.session_state.additional_content = False
         
 
 
