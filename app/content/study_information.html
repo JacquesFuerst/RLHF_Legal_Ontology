@@ -15,7 +15,7 @@
 
 <h3><strong>Definities:</strong></h3>
 <div class="info-section">
-    <p>Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven voor het extraheren van precondities of subfacts uit een tekst op basis van de act/fact die aan het model wordt gegeven. Daarom is het handig om een duidelijker idee te krijgen van wat deze termen impliceren:</p>
+    <p>Binnen deze studie moet u de antwoorden evalueren die door een taalmodel worden gegeven voor het extraheren van precondities of subfacts uit een wettelijke tekst op basis van de act/fact die aan het model wordt gegeven. Daarom is het handig om een duidelijker idee te krijgen van wat deze termen impliceren:</p>
     <p>Een <strong>act</strong> kan worden uitgevoerd door een agent binnen het normatieve systeem dat wordt gedefinieerd door het juridische document.</p>
     <p>Een <strong>preconditie</strong> beschrijft de omstandigheden waaronder de handeling wettelijk kan worden uitgevoerd. Als er een NOT voor de preconditie staat, moet de ontkende versie van de voorwaarde gelden om de actie geldig te laten zijn.</p>
     <p>Een <strong>fact</strong> beschrijft een zaak waarvan de aanwezigheid of waarheidswaarde de toestand van het normatieve systeem kenmerkt.</p>
@@ -25,6 +25,12 @@
         <li>Een lid van de bibliotheek zijn</li>
         <li>NOT openstaande boetes hebben</li>
     </ul>
+    <p>Een voorbeeld van een <strong>fact</strong> in de context van Mens-erger-je-niet zou kunnen zijn: <em>'Een pion van een speler staat op het bord.'</em></p>
+    <p>De bijbehorende subfacts zouden dan zijn:</p>
+    <ol>
+        <li>NOT de pion is in het startvak</li>
+        <li>De speler heeft een zes gegooid</li>
+    </ol>
 </div>
 
 <h3><strong>Procedure:</strong></h3>
@@ -36,9 +42,8 @@
         <li>a) het vinden van alle relevante precondities in de tekst</li>
         <li>b) hoe duidelijk de positie in de tekst is die het model aanduidde</li>
     </ul>
-    <p>U ontvangt het document waarin u de precondities kunt vinden en de precondities zelf, maar NIET hun werkelijke positie in de tekst.</p>
-    <p>Voor het evalueren van onderdeel a) kunt u eenvoudig de precondities vergelijken die het model noemde met degene die aan u werden verstrekt (die de waarheid vertegenwoordigen).</p>
-    <p>b) is het uw taak om te zien of u de preconditie kunt vinden in het document met de informatie die u uit de prompt hebt gekregen en de prestaties van het taalmodel te evalueren op basis van hoe gemakkelijk het voor u was om deze te vinden. Soms werd de positie niet gegeven in de ground truth, dit kunt u ook aangeven in de feedback.</p>
+    <p>Voor het modelantwoord krijgt u het hele antwoord voor een act/fact (die dus meredere precondities/subfacts kan beïnhouden) en moet u voor elke ground truth preconditie afzonderlijk evalueren of deze a) aanwezig is in het antwoord en b) of de positie ervan ook goed is aangegeven in het antwoord. Soms werd de positie niet gegeven in de ground truth, dit kunt u ook aangeven in de feedback. </p>
+    <p>U wordt gevraagd om feedback te geven voor hetzlefde antwoord voor alle ground truth precondities in isolatie, dus na het geven van feedback voor één preconditie verandert het antwoord mogelijk niet als er meerdere precondities/subfacts aanwezig zijn in de set voor de gegeven act/fact.</p>
     <p>Dit zal ongeveer <span id="hours">{hours}</span> uur duren.</p>
 </div>
 

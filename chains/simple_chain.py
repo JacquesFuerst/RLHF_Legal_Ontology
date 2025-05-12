@@ -321,7 +321,8 @@ def get_rag_response(query, llm, tokenizer, embed_func, act=True, number_precond
         
         with torch.no_grad():
                 # generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=max_new_tokens)
-                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.9, repetition_penalty=1.1, top_p=0.9, max_new_tokens=max_new_tokens)
+                #, repetition_penalty=1.1
+                generated_ids = llm.generate(**inputs, do_sample=True, temperature=0.7, top_p=0.9, max_new_tokens=max_new_tokens)
         print("⏱ Time taken:", time.time() - start)
 
         # print("Generated IDs:", generated_ids)

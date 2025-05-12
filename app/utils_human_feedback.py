@@ -184,21 +184,20 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
     # update all the indices in the correct order
     if st.session_state.current_precondition_index < len(precond_ids) - 1:
         # 1. go through all preconditions
-        print("We ")
+        print("We are going throught all preconditions")
         st.session_state.current_precondition_index += 1
 
-    #TODO: double check this, but using smaller than 2 atm since it is the number of repsonses
-    elif not st.session_state.additional_content:
-        print("We went through all preconditions for this response")
-        #2. display addditional question
-        st.session_state.additional_content = True
+    # elif not st.session_state.additional_content:
+    #     print("We went through all preconditions for this response")
+    #     #2. display addditional question
+    #     st.session_state.additional_content = True
     
-    elif st.session_state.current_response_index < 1 and st.session_state.additional_content:
+    elif st.session_state.current_response_index < 1: #and st.session_state.additional_content:
         print("We collected additional feedback and go to the next response")
         # if the precondition index is at the end and additional question has been asked, reset it to 0 and Flase
         # and increase the response index
         st.session_state.current_precondition_index = 0
-        st.session_state.additional_content = False
+        # st.session_state.additional_content = False
         st.session_state.current_response_index += 1
 
     elif st.session_state.current_prompt_config_index < len(prompt_configs) - 1:  
@@ -217,7 +216,7 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
         st.session_state.current_precondition_index = 0
         st.session_state.current_prompt_config_index = 0
         st.session_state.current_index += 1
-        st.session_state.additional_content = False
+        # st.session_state.additional_content = False
         
 
 

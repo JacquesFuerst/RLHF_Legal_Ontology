@@ -74,7 +74,7 @@ study_information = load_html(os.getenv('STUDY_INFORMATION_HTML_PATH'), hours, n
 
 
 # Load the JSON file
-data = read_json(os.getenv('MODEL_ANSWERS'))
+data = read_json(os.getenv('DATA_FILE_1'))
 
 # informed consent pdf path
 informed_consent_pdf_path = os.getenv('INFORMED_CONSENT_STORAGE_PATH') + f'_{unique_id}.pdf'
@@ -217,49 +217,80 @@ else:
                 st.markdown(f"""
                             ### **Act:** 
                             {frame}""")
+                
+                st.markdown("### **Model acts en precondities:**")
+
+                answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                        <p>{current_response}</p>
+                                    </div>"""
+
+                # replace new line characters with <br> tags for HTML rendering
+                html_text = answer_text.replace('\n', '<br>')
+
+                st.markdown(html_text, unsafe_allow_html=True)
+
+                if not st.session_state.additional_content:
+                    #display ground truth only if not getting additional content
+                    st.markdown("### **Ground Truth preconditie en positie in de tekst:**")
+
+                    ground_truth_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                        <p>Preconditie tekst: {precondition_text}</p>
+                                        <p>Preconditie positie: {precondition_position}</p>
+                                    </div>"""
+                    
+                    # replace new line characters with <br> tags for HTML rendering
+                    html_ground_truth = ground_truth_text.replace('\n', '<br>')
+
+                    st.markdown(html_ground_truth, unsafe_allow_html=True)
             else:
+
                 st.markdown(f"""
                             ### **Fact:** 
                             {frame}""")
                 
-            st.markdown("### **Antwoord:**")
+                st.markdown("### **Model facts en subfacts:**")
 
-            # html_text = answer_text.replace('\n', '<br>')
+                answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                        <p>{current_response}</p>
+                                    </div>"""
 
-            answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">{current_response}</div>"""
+                # replace new line characters with <br> tags for HTML rendering
+                html_answer = answer_text.replace('\n', '<br>')
 
-            # replace new line characters with <br> tags for HTML rendering
-            html_text = answer_text.replace('\n', '<br>')
+                st.markdown(html_answer, unsafe_allow_html=True)
+            
+                if not st.session_state.additional_content:
+                    #display ground truth only if not getting additional content
 
-            st.markdown(html_text, unsafe_allow_html=True)
+                    st.markdown("### **Ground Truth subfact en positie in de tekst:**")
 
-            if not st.session_state.additional_content:
-                # only display the ground truth if not getting additional feedback for the answer
+                    ground_truth_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                        <p>Subfact tekst: {precondition_text}</p>
+                                        <p>Subfact positie: {precondition_position}</p>
+                                    </div>"""
+                    
+                    # replace new line characters with <br> tags for HTML rendering
+                    html_ground_truth = ground_truth_text.replace('\n', '<br>')
 
-                if data[current_index].get('type') == 'act':
-                    st.write(f"""
-                                ### **Ground Truth:**
-                            
-                                Preconditie tekst: {precondition_text} \n
-                                Preconditie positie: {precondition_position} \n
-                    """)
-                else:
-                    st.write(f"""
-                                ### **Ground Truth:**
-                            
-                                Subfact tekst: {precondition_text} \n
-                                Subfact positie: {precondition_position} \n
-                    """)
+                    st.markdown(html_ground_truth, unsafe_allow_html=True)
 
+                
+            
+
+            
+                    
             #TODO: somehow collect  additional feedback here, but how to do this? How would participants know what part of the answer is additional?
             # maybe ask about how they would rate the quality of the answer overall (how concise it is and how complete???)
 
             if st.session_state.additional_content:
 
+                # additional content question for contents that are beyond the precondition that the model was supposed to find 
+                # not included in the study in the end
+
                 st.markdown(
                     """
                     
-                    #### In welke mate was de extra informatie naast de juiste randvoorwaarden/subfacten met betrekking tot het vinden van de randvoorwaarden en het nadenken over welke delen van de tekst goede randvoorwaarden zijn nuttig of verwarrend?
+                    #### In welke mate was de extra informatie naast de juiste precondities/subfacten met betrekking tot het vinden van de randvoorwaarden en het nadenken over welke delen van de tekst goede randvoorwaarden zijn nuttig of verwarrend?
                      
                     """
                 )
@@ -282,7 +313,7 @@ else:
 
                 # Create Likert scales for feedback
                 st.markdown(
-                    "### In welke mate is de preconditie door het model geëxtraheerd?"
+                    "#### In welke mate is de preconditie door het model geëxtraheerd?"
                 )
 
                 feedback_1 = st.radio(
@@ -291,7 +322,7 @@ else:
                 )
 
                 st.markdown(
-                    "### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
+                    "#### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
                 )
 
                 feedback_2 = st.radio(
