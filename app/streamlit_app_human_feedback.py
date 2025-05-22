@@ -52,6 +52,28 @@ if 'additional_content' not in st.session_state:
 if 'consent_given' not in st.session_state:
     st.session_state.consent_given = False
 
+
+# Set a default key for the radio buttons
+if "feedback_extraction_radio" not in st.session_state:
+    st.session_state.feedback_extraction_radio = "Volledig fout"
+
+if "feedback_detection_radio" not in st.session_state:
+    st.session_state.feedback_detection_radio = "Geen positie in ground truth"
+
+
+# Initialize reset flag if not already set
+if "reset_feedback" not in st.session_state:
+    st.session_state.reset_feedback = False
+
+# If reset flag is set, reset the radio buttons
+if st.session_state.reset_feedback:
+    st.session_state.feedback_extraction_radio = "Volledig fout"
+    st.session_state.feedback_detection_radio = "Geen positie in ground truth"
+    st.session_state.reset_feedback = False # Clear the flag
+
+
+
+
 ##############################################################################
 
 
@@ -62,7 +84,7 @@ if 'consent_given' not in st.session_state:
 unique_id = st.session_state.unique_id
 
 # Define the number of prompt-answer pairs the user needs to fill in
-number_of_pairs = 150 
+number_of_pairs = 250
 
 # amounbt of hours study will take
 hours = 2
@@ -74,7 +96,7 @@ study_information = load_html(os.getenv('STUDY_INFORMATION_HTML_PATH'), hours, n
 
 
 # Load the JSON file
-data = read_json(os.getenv('DATA_FILE_1'))
+data = read_json(os.getenv('DATA_INTERFACE'))
 
 # informed consent pdf path
 informed_consent_pdf_path = os.getenv('INFORMED_CONSENT_STORAGE_PATH') + f'_{unique_id}.pdf'
@@ -101,6 +123,69 @@ if not st.session_state.consent_given:
 
         # Display the study information text
         st.markdown(study_information, unsafe_allow_html=True)
+
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+
+        # Display an example layout of the task
+
+        st.markdown("# **Voorbeeld Studie Interface:**")
+        st.markdown("""
+
+                        ### **Fact:**
+
+                        Persoon A leent een boek""")
+
+        st.markdown("### **Model subfacts en posities in de tekst:**")
+
+        answer_text = """<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                <p> 1. Lidmaatschap: Een persoon die zich heeft geregistreerd bij de bibliotheek en akkoord is gegaan met de algemene voorwaarden. 
+                                        Positie: Artikel 2, Algemene voorwaarden lidmaatschap
+
+                                    2. Lidmaatschap: Een persoon die een geldig identificatiebewijs heeft overlegd en een bibliotheekpas heeft ontvangen.  
+                                        Positie: Artikel 3, Algemene voorwaarden lidmaatschap
+                                        
+                                    3. Lidmaatschap: Een persoon wiens lidmaatschap actief is en die geen openstaande boetes of schorsingen heeft.  
+                                        Positie: Artikel 5, Algemene voorwaarden lidmaatschap</p>
+
+                            </div>"""
+
+
+
+        # replace new line characters with <br> tags for HTML rendering
+
+        html_text = answer_text.replace('\n', '<br>')
+        st.markdown(html_text, unsafe_allow_html=True)
+
+        #display ground truth only if not getting additional content
+
+        st.markdown("### **Ground Truth subfact en positie in de tekst:**")
+
+
+
+        ground_truth_text = """<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                    <p>Subfact tekst: Een lid van de bibliotheek zijn</p>
+                                    <p>Subfact positie: Artikel 5 sectie 2 IN Algemene voorwaarden voor het lidmaatschap van de bibliotheek 2017</p>
+                                </div>"""
+
+        html_ground_truth = ground_truth_text.replace('\n', '<br>')
+        st.markdown(html_ground_truth, unsafe_allow_html=True)
+
+        st.markdown(
+                    "#### In welke mate is de subfact door het model geëxtraheerd?"
+                )
+        feedback_1_example = st.radio(
+                label="something",
+                options=("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct"),
+                label_visibility="collapsed"
+            )
+        st.markdown(
+                    "#### Hoe duidelijk is de positie van de subfact in de tekst van wat het model heeft weergegeven?"
+                )
+        feedback_2_example = st.radio(
+                label="something",
+                options=("Geen positie in ground truth","Goed", "Niet goed"),
+                label_visibility="collapsed"
+            )
         
         ## Button to navigate to the informed consent page
         if st.button("Informed Consent➡️ "):
@@ -135,7 +220,7 @@ if not st.session_state.consent_given:
             options=("Ik ga niet akkoord", "Ik ga akkoord")
         )
 
-        if st.button("Submit Consent"):
+        if st.button("Consent geven"):
             if consent == "Ik ga akkoord":
                 submit_consent(study_information, informed_consent, name, informed_consent_pdf_path)
 
@@ -205,7 +290,7 @@ else:
         if st.session_state.page_2 == 2:
             print("We are on page 2")
             # Button to navigate back to the study information page
-            if st.button("⬅️ Definities"):
+            if st.button("⬅️ Studie Informatie"):
                 prev_page_2()
                 st.rerun()
 
@@ -218,7 +303,7 @@ else:
                             ### **Act:** 
                             {frame}""")
                 
-                st.markdown("### **Model acts en precondities:**")
+                st.markdown("### **Model precondities en posities in de tekst:**")
 
                 answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
                                         <p>{current_response}</p>
@@ -248,7 +333,7 @@ else:
                             ### **Fact:** 
                             {frame}""")
                 
-                st.markdown("### **Model facts en subfacts:**")
+                st.markdown("### **Model subfacts en posities in de tekst:**")
 
                 answer_text = f"""<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
                                         <p>{current_response}</p>
@@ -301,7 +386,7 @@ else:
                 )
 
                 # Save the feedback and move to the next question
-                if st.button("Submit Feedback"):
+                if st.button("Feedback geven"):
                     #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
                     # maybe get precondition keys ads list and keep index within that list...
                     # also change response index 
@@ -310,34 +395,50 @@ else:
                     st.rerun()  # Trigger a refresh
             
             else:
-
-                # Create Likert scales for feedback
-                st.markdown(
-                    "#### In welke mate is de preconditie door het model geëxtraheerd?"
-                )
+                
+                if data[current_index].get('type') == 'act':
+                    # Create Likert scales for feedback
+                    st.markdown(
+                        "#### In welke mate is de preconditie door het model geëxtraheerd?"
+                    )
+                else:
+                    st.markdown(
+                        "#### In welke mate is de subfact door het model geëxtraheerd?"
+                    )
 
                 feedback_1 = st.radio(
-                    "",
-                    ("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct")
+                    label="something",
+                    options=("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct"),
+                    key="feedback_extraction_radio",
+                    label_visibility="collapsed"
                 )
 
-                st.markdown(
-                    "#### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
-                )
+                if data[current_index].get('type') == 'act':
+                    st.markdown(
+                        "#### Hoe duidelijk is de positie van de preconditie in de tekst van wat het model heeft weergegeven?"
+                    )
+                else:
+                    st.markdown(
+                        "#### Hoe duidelijk is de positie van de subfact in de tekst van wat het model heeft weergegeven?"
+                    )
 
                 feedback_2 = st.radio(
-                    "",
-                    ("Onbestemde positie in ground truth","Helemaal niet duidelijk", "Niet duidelijk", "Duidelijk", "Zeer duidelijk")
+                    label="something",
+                    options=("Geen positie in ground truth","Goed", "Niet goed"),
+                    key="feedback_detection_radio",
+                    label_visibility="collapsed"
                 )
 
                 # Save the feedback and move to the next question
-                if st.button("Submit Feedback"):
+                if st.button("Feedback geven"):
                     #TODO: in submit feedback function, should only change current data index if all preconditions have been looked at AND all responses have been looked at, 
                     # maybe get precondition keys ads list and keep index within that list...
                     # also change response index 
                     submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt_configs)
                     print("feedback given")
+                    st.session_state.reset_feedback = True
                     st.rerun()  # Trigger a refresh
+                    
         
         elif st.session_state.page_2 == 1:
             print("We are on page 8")
@@ -346,9 +447,71 @@ else:
                 next_page_2()
                 st.rerun()
 
-            #Display the definition of and action and a precondition
-            st.markdown(definitions, unsafe_allow_html=True)
+            #Display the study information
+            st.markdown(study_information, unsafe_allow_html=True)
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
 
+            
+            # Display an example layout of the task
+
+            st.markdown("# **Voorbeeld Studie Interface:**")
+            st.markdown("""
+
+                            ### **Fact:**
+
+                            Persoon A leent een boek""")
+
+            st.markdown("### **Model subfacts en posities in de tekst:**")
+
+            answer_text = """<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                    <p> 1. Lidmaatschap: Een persoon die zich heeft geregistreerd bij de bibliotheek en akkoord is gegaan met de algemene voorwaarden. 
+                                            Positie: Artikel 2, Algemene voorwaarden lidmaatschap
+
+                                        2. Lidmaatschap: Een persoon die een geldig identificatiebewijs heeft overlegd en een bibliotheekpas heeft ontvangen. 
+                                            Positie: Artikel 3, Algemene voorwaarden lidmaatschap
+                                            
+                                        3. Lidmaatschap: Een persoon wiens lidmaatschap actief is en die geen openstaande boetes of schorsingen heeft.  
+                                            Positie: Artikel 5, Algemene voorwaarden lidmaatschap</p>
+
+                                </div>"""
+
+
+
+            # replace new line characters with <br> tags for HTML rendering
+
+            html_text = answer_text.replace('\n', '<br>')
+            st.markdown(html_text, unsafe_allow_html=True)
+
+            #display ground truth only if not getting additional content
+
+            st.markdown("### **Ground Truth subfact en positie in de tekst:**")
+
+
+
+            ground_truth_text = """<div class="no-scroll"; style="white-space: normal; word-wrap: break-word;">
+                                        <p>Subfact tekst: Een lid van de bibliotheek zijn</p>
+                                        <p>Subfact positie: Artikel 5 sectie 2 IN Algemene voorwaarden voor het lidmaatschap van de bibliotheek 2017</p>
+                                    </div>"""
+
+            html_ground_truth = ground_truth_text.replace('\n', '<br>')
+            st.markdown(html_ground_truth, unsafe_allow_html=True)
+
+            st.markdown(
+                        "#### In welke mate is de subfact door het model geëxtraheerd?"
+                    )
+            feedback_1_example = st.radio(
+                    label="something",
+                    options=("Volledig fout", "Deels fout", "Grotendeels correct", "Volledig correct"),
+                    label_visibility="collapsed"
+                )
+            st.markdown(
+                        "#### Hoe duidelijk is de positie van de subfact in de tekst van wat het model heeft weergegeven?"
+                    )
+            feedback_2_example = st.radio(
+                    label="something",
+                    options=("Geen positie in ground truth","Goed", "Niet goed"),
+                    label_visibility="collapsed"
+                )
         
     else:
         st.write("Je hebt alle vragen geëvalueerd. Hartelijk dank voor je feedback!")

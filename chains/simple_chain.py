@@ -81,6 +81,8 @@ def generate_prompt_act(query, context, prompt_conditions, number_preconditions=
                                 """
 
 
+
+        # TODO: add subfact definition for RL training: Subfact: Subfacts zijn onderverdelingen van een fact die allemaal waar moeten zijn om het fact waar te laten zijn.
         prompt = f"""
 
 

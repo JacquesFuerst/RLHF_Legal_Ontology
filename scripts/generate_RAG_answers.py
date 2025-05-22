@@ -39,7 +39,7 @@ def generate_answers(ground_truth_file, knowledge_base_file):
     generator = Generator(os.getenv("GENERATION_MODEL_NAME"))
     llm, tokenizer = generator.load_llm_and_tokenizer()
     embed_func = None
-    act_bool = True
+    act_bool = False
 
     model_answers = os.getenv("MODEL_ANSWERS")
     
