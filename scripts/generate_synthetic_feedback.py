@@ -1,6 +1,10 @@
 import os
 from openai import AzureOpenAI
 
+from app.utils_json import read_json, write_json
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
+
 
 # setup variables for the Azure OpenAI API
 endpoint = "https://openai-ds-instance-sweden.openai.azure.com/"
@@ -20,9 +24,7 @@ client = AzureOpenAI(
     api_key=subscription_key,
 )
 
-
-
-
+# System prompt, similar to instructions human participants received
 
 system_prompt = """
 
@@ -88,36 +90,104 @@ system_prompt = """
 
 
 
+# Generate synthetic feedback
+
+data = read_json(os.getenv('DATA_INTERFACE'))
+
+for datapoint in data:
+    answer = datapoint['answer']
+    ground_truth = datapoint['ground_truth']
+    # Assuming ground_truth is a list of preconditions/subfacts
+    ground_truth_str = "\n".join(ground_truth)
+
+    # Construct the content string
+    # This is a simplified example, adjust according to your actual data structure
 
 
-content_string = # answer + ground truth
 
+    content_string = f"""
 
+                    Model antwoord: {answer}
+                    Ground truth precondities/subfacts: {ground_truth_str}
+                    """ # answer + ground truth
+    
+    response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": content_string,
+            }
+        ],
+        max_tokens=4096,
+        temperature=1.0,
+        top_p=1.0,
+        model=deployment
+    )
 
+    # Synthetic feedback added to the datapoint
+    datapoint['synthetic_feedback'] = response.choices[0].message.content
 
+    # Store synthetic feedback in csv format
 
+    # Define the CSV file path
+    csv_file_path = os.getenv('SYNTHETIC_FEEDBACK_CSV')
 
+    # Check if the CSV file already exists
+    file_exists = os.path.isfile(csv_file_path)
 
+    # Define the field names for the CSV file
+    field_names = ['file', 
+                'frame_ID', 
+                'frame_type', 
+                'frame_text', 
+                'precondition_id', 
+                'precondition_text', 
+                'precondition_position', 
+                'response_text', 
+                'prompt_config_examples', 
+                'prompt_config_chain_of_thought', 
+                'feedback_extraction', 
+                'feedback_detection', 
+                'additional_feedback'
+    ]
 
+    # TODO: figure out how to get all these variables or which are even needed when generating synthetic feedback
 
-
-
-response = client.chat.completions.create(
-    messages=[
-        {
-            "role": "system",
-            "content": system_prompt,
-        },
-        {
-            "role": "user",
-            "content": content_string,
+    row = {
+            'file': datapoint['file'], 
+            'frame_ID': datapoint['ID'], 
+            'frame_type': datapoint['type'],
+            'frame_text': datapoint['text'], 
+            'precondition_id': current_precond,
+            'precondition_text': datapoint['precondition_texts'][current_precond],
+            'precondition_position': datapoint['text_positions'][current_precond],
+            'response_text': datapoint['responses'][current_prompt_config][current_response_index],
+            'prompt_config_examples': config_examples[1],
+            'prompt_config_chain_of_thought': config_chain_of_thought[1],
+            'feedback_extraction': feedback_1,
+            'feedback_detection':feedback_2,
+            'additional_feedback': None
         }
-    ],
-    max_tokens=4096,
-    temperature=1.0,
-    top_p=1.0,
-    model=deployment
-)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

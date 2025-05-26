@@ -218,15 +218,3 @@ def submit_feedback(feedback_1, feedback_2, data, unique_id, precond_ids, prompt
         st.session_state.current_index += 1
         # st.session_state.additional_content = False
         
-
-
-
-
-
-# # function to create pdf
-# def create_pdf(text):
-#     pdf = FPDF()
-#     pdf.add_page()
-#     pdf.set_font("Arial", size=12)
-#     pdf.multi_cell(0, 10, text)
-#     return pdf
