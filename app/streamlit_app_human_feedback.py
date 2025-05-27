@@ -84,7 +84,7 @@ if st.session_state.reset_feedback:
 unique_id = st.session_state.unique_id
 
 # Define the number of prompt-answer pairs the user needs to fill in
-number_of_pairs = 250
+number_of_pairs = 170
 
 # amounbt of hours study will take
 hours = 2
