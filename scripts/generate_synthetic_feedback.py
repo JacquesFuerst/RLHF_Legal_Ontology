@@ -1,5 +1,6 @@
 import os
 from openai import AzureOpenAI
+import ast
 
 from app.utils_json import read_json, write_json
 from dotenv import load_dotenv
@@ -25,6 +26,8 @@ client = AzureOpenAI(
 )
 
 # System prompt, similar to instructions human participants received
+
+#TODO: double check system prompt, think about role system prompt whether it makes sense to give same instructions as to humans literally
 
 system_prompt = """
 
@@ -61,7 +64,7 @@ system_prompt = """
 
                     ## Procedure
 
-                    Als u instemt met deelname, krijgt u rond 250 paren van een act/fact en de bijbehorende subfact/preconditie(s) te zien.
+                    Als u instemt met deelname, krijgt u rond 250 paren van een act/fact en de bijbehorende subfact/preconditie(s) te zien.
 
                     Voor elk paar werd de act/fact aan een taalmodel gegeven als onderdeel van een prompt, met de opdracht om alle bijbehorende subfact/preconditie(s) en hun respectieve positie(s) in de tekst terug te geven.
 
@@ -95,87 +98,109 @@ system_prompt = """
 data = read_json(os.getenv('SYNTHETIC_FEEDBACK_DATASET'))
 
 for datapoint in data:
-    answer = datapoint['answer']
-    # TODO: iterate over all preconditions/subfacts in the answer
-    precoditions = datapoint['text_preconditions']
+    # get the relevant data fields
+    responses_dict = datapoint['responses']
+    preconditions = datapoint['text_preconditions']
     positions = datapoint['text_positions']
 
+    # get the prompt config examples and chain of thought
+    prompt_configs = list(responses_dict.keys())
+    prompt_config_id = prompt_configs[]
     
 
-    # Construct the content string
-    # This is a simplified example, adjust according to your actual data structure
+    for prompt_config_id, prompt_config in enumerate(prompt_configs):
+        # get the examples and chain of thought from the prompt config
+
+        # Convert string to actual tuple
+        parsed = ast.literal_eval(prompt_config)
+
+        # Get the first value
+        config_examples = parsed[0]
+        config_chain_of_thought = parsed[1]
+
+        responses = responses_dict[prompt_config_id]
+
+        for response_index, response in enumerate(responses):
+
+            for precondition in preconditions:
+                #get the textposition for the current precondition
+                textposition = positions[precondition]
+
+                # Construct the content string
+
+                content_string = f"""
+
+                                Model antwoord: {response}
+                                Ground truth preconditie/subfact: {precondition}
+                                Preconditie/subfact positie: {textposition}
+                                """ # answer + ground truth
+                
+                response = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": system_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": content_string,
+                        }
+                    ],
+                    max_tokens=4096,
+                    temperature=1.0,
+                    top_p=1.0,
+                    model=deployment,
+                    n=2 # 2 answer choices --> should be fairly diverse due to high temperature
+                )
 
 
 
-    content_string = f"""
+                # Synthetic feedback added to the datapoint
+                datapoint['synthetic_feedback'] = response.choices[0].message.content
 
-                    Model antwoord: {answer}
-                    Ground truth preconditie/subfact: {precond_str}
-                    Preconditie/subfact positie: {position_str}
-                    """ # answer + ground truth
-    
-    response = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {
-                "role": "user",
-                "content": content_string,
-            }
-        ],
-        max_tokens=4096,
-        temperature=1.0,
-        top_p=1.0,
-        model=deployment,
-        n=2 # 2 answer choices --> should be fairly diverse due to high temperature
-    )
+                # Store synthetic feedback in csv format
 
-    # Synthetic feedback added to the datapoint
-    datapoint['synthetic_feedback'] = response.choices[0].message.content
+                # Define the CSV file path
+                csv_file_path = os.getenv('SYNTHETIC_FEEDBACK_CSV')
 
-    # Store synthetic feedback in csv format
+                # Check if the CSV file already exists
+                file_exists = os.path.isfile(csv_file_path)
 
-    # Define the CSV file path
-    csv_file_path = os.getenv('SYNTHETIC_FEEDBACK_CSV')
+                # Define the field names for the CSV file
+                field_names = ['file', 
+                            'frame_ID', 
+                            'frame_type', 
+                            'frame_text', 
+                            'precondition_id', 
+                            'precondition_text', 
+                            'precondition_position', 
+                            'response_text', 
+                            'prompt_config_examples', 
+                            'prompt_config_chain_of_thought', 
+                            'feedback_extraction', 
+                            'feedback_detection', 
+                            'additional_feedback'
+                ]
 
-    # Check if the CSV file already exists
-    file_exists = os.path.isfile(csv_file_path)
+                # TODO: figure out how to split model answer into feedback parts... Maybe just store in post handling??? Or maybe need to 
 
-    # Define the field names for the CSV file
-    field_names = ['file', 
-                'frame_ID', 
-                'frame_type', 
-                'frame_text', 
-                'precondition_id', 
-                'precondition_text', 
-                'precondition_position', 
-                'response_text', 
-                'prompt_config_examples', 
-                'prompt_config_chain_of_thought', 
-                'feedback_extraction', 
-                'feedback_detection', 
-                'additional_feedback'
-    ]
-
-    # TODO: figure out how to get all these variables or which are even needed when generating synthetic feedback
-
-    row = {
-            'file': datapoint['file'], 
-            'frame_ID': datapoint['ID'], 
-            'frame_type': datapoint['type'],
-            'frame_text': datapoint['text'], 
-            'precondition_id': current_precond,
-            'precondition_text': datapoint['precondition_texts'][current_precond],
-            'precondition_position': datapoint['text_positions'][current_precond],
-            'response_text': datapoint['responses'][current_prompt_config][current_response_index],
-            'prompt_config_examples': config_examples[1],
-            'prompt_config_chain_of_thought': config_chain_of_thought[1],
-            'feedback_extraction': feedback_1,
-            'feedback_detection':feedback_2,
-            'additional_feedback': None
-        }
+                row = {
+                        'file': datapoint['file'], 
+                        'frame_ID': datapoint['ID'], 
+                        'frame_type': datapoint['type'],
+                        'frame_text': datapoint['text'], 
+                        'precondition_id': precondition,
+                        'precondition_text': datapoint['precondition_texts'][precondition],
+                        'precondition_position': datapoint['text_positions'][precondition],
+                        'response_text': datapoint['responses'][prompt_config][response_index],
+                        'prompt_config_examples': config_examples[1],
+                        'prompt_config_chain_of_thought': config_chain_of_thought[1],
+                        'feedback_extraction': None,
+                        'feedback_detection':None,
+                        'additional_feedback': None,
+                        'synthetic_feedback_1': response.choices[0].message.content,
+                        'synthetic_feedback_2': response.choices[1].message.content,
+                    }
 
 
 
