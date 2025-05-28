@@ -92,13 +92,15 @@ system_prompt = """
 
 # Generate synthetic feedback
 
-data = read_json(os.getenv('DATA_INTERFACE'))
+data = read_json(os.getenv('SYNTHETIC_FEEDBACK_DATASET'))
 
 for datapoint in data:
     answer = datapoint['answer']
-    ground_truth = datapoint['ground_truth']
-    # Assuming ground_truth is a list of preconditions/subfacts
-    ground_truth_str = "\n".join(ground_truth)
+    # TODO: iterate over all preconditions/subfacts in the answer
+    precoditions = datapoint['text_preconditions']
+    positions = datapoint['text_positions']
+
+    
 
     # Construct the content string
     # This is a simplified example, adjust according to your actual data structure
@@ -108,7 +110,8 @@ for datapoint in data:
     content_string = f"""
 
                     Model antwoord: {answer}
-                    Ground truth precondities/subfacts: {ground_truth_str}
+                    Ground truth preconditie/subfact: {precond_str}
+                    Preconditie/subfact positie: {position_str}
                     """ # answer + ground truth
     
     response = client.chat.completions.create(
@@ -125,7 +128,8 @@ for datapoint in data:
         max_tokens=4096,
         temperature=1.0,
         top_p=1.0,
-        model=deployment
+        model=deployment,
+        n=2 # 2 answer choices --> should be fairly diverse due to high temperature
     )
 
     # Synthetic feedback added to the datapoint
