@@ -1,8 +1,15 @@
 import os
 from openai import AzureOpenAI
 import ast
+import csv
+import re
 
-from app.utils_json import read_json, write_json
+import sys
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.json_handling import read_json, write_json
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
 
@@ -95,17 +102,16 @@ system_prompt = """
 
 # Generate synthetic feedback
 
-data = read_json(os.getenv('SYNTHETIC_FEEDBACK_DATASET'))
+data = read_json(os.getenv('SYNTHETIC_DATA_FILE'))
 
 for datapoint in data:
     # get the relevant data fields
     responses_dict = datapoint['responses']
-    preconditions = datapoint['text_preconditions']
+    preconditions = datapoint['precondition_texts']
     positions = datapoint['text_positions']
 
     # get the prompt config examples and chain of thought
     prompt_configs = list(responses_dict.keys())
-    prompt_config_id = prompt_configs[]
     
 
     for prompt_config_id, prompt_config in enumerate(prompt_configs):
@@ -118,7 +124,9 @@ for datapoint in data:
         config_examples = parsed[0]
         config_chain_of_thought = parsed[1]
 
-        responses = responses_dict[prompt_config_id]
+        print(responses_dict.keys())
+
+        responses = responses_dict[prompt_config]
 
         for response_index, response in enumerate(responses):
 
@@ -179,12 +187,32 @@ for datapoint in data:
                             'prompt_config_chain_of_thought', 
                             'feedback_extraction', 
                             'feedback_detection', 
-                            'additional_feedback'
+                            'additional_feedback',
+                            'synthetic_feedback',
                 ]
 
-                # TODO: figure out how to split model answer into feedback parts... Maybe just store in post handling??? Or maybe need to 
+                #  Split model answer into feedback parts 
 
-                row = {
+                answer_1 = response.choices[0].message.content
+                answer_2 = response.choices[1].message.content
+
+                # Regular expressions to extract the values
+                extractie_match_1 = re.search(r'preconditie extractie:\s*(.+)', answer_1)
+                detectie_match_1 = re.search(r'preconditie detectie:\s*(.+)', answer_1)
+
+                extractie_match_2 = re.search(r'preconditie extractie:\s*(.+)', answer_2)
+                detectie_match_2 = re.search(r'preconditie detectie:\s*(.+)', answer_2)
+
+                # Extract the values using group(1) and strip whitespace
+
+                extractie_1 = extractie_match_1.group(1).strip() if extractie_match_1 else None
+                detectie_1 = detectie_match_1.group(1).strip() if detectie_match_1 else None
+
+                extractie_2 = extractie_match_2.group(1).strip() if extractie_match_2 else None
+                detectie_2 = detectie_match_2.group(1).strip() if detectie_match_2 else None
+
+
+                row_1 = {
                         'file': datapoint['file'], 
                         'frame_ID': datapoint['ID'], 
                         'frame_type': datapoint['type'],
@@ -195,12 +223,48 @@ for datapoint in data:
                         'response_text': datapoint['responses'][prompt_config][response_index],
                         'prompt_config_examples': config_examples[1],
                         'prompt_config_chain_of_thought': config_chain_of_thought[1],
-                        'feedback_extraction': None,
-                        'feedback_detection':None,
+                        'feedback_extraction': extractie_1,
+                        'feedback_detection': detectie_1,
                         'additional_feedback': None,
-                        'synthetic_feedback_1': response.choices[0].message.content,
-                        'synthetic_feedback_2': response.choices[1].message.content,
+                        'synthetic_feedback': response.choices[0].message.content,
                     }
+                
+                row_2 = {
+                        'file': datapoint['file'], 
+                        'frame_ID': datapoint['ID'], 
+                        'frame_type': datapoint['type'],
+                        'frame_text': datapoint['text'], 
+                        'precondition_id': precondition,
+                        'precondition_text': datapoint['precondition_texts'][precondition],
+                        'precondition_position': datapoint['text_positions'][precondition],
+                        'response_text': datapoint['responses'][prompt_config][response_index],
+                        'prompt_config_examples': config_examples[1],
+                        'prompt_config_chain_of_thought': config_chain_of_thought[1],
+                        'feedback_extraction': extractie_2,
+                        'feedback_detection': detectie_2,
+                        'additional_feedback': None,
+                        'synthetic_feedback': response.choices[1].message.content,
+                    }
+                
+                print(f"First synthetic feedback: {response.choices[0].message.content}")
+                print(f"Second synthetic feedback: {response.choices[1].message.content}")
+
+                print(f"Extractie 1: {extractie_1}")
+                print(f"Detectie 1: {detectie_1}")
+                print(f"Extractie 2: {extractie_2}")
+                print(f"Detectie 2: {detectie_2}")
+
+                # Write the row to the CSV file
+                with open(csv_file_path, mode='a', newline='') as file:
+                    writer = csv.DictWriter(file, fieldnames=field_names, delimiter=';')
+                    
+                    # Write the header only if the file does not exist
+                    if not file_exists:
+                        writer.writeheader()
+                    
+                    # Write the data
+                    writer.writerow(row_1)
+                    writer.writerow(row_2)
 
 
 
@@ -213,11 +277,3 @@ for datapoint in data:
 
 
 
-
-
-
-
-
-
-
-print(response.choices[0].message.content)
