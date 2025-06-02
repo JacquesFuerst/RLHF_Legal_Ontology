@@ -1,19 +1,26 @@
 import torch
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+
 def parse_ratings(rating):
     rating_dict = {
-        "Volledig fout": 0,
-        "Deels fout": 1,
-        "Grotendeels correct": 2,
-        "Volledig correct": 3,
-        "Geen positie in ground truth": 5, #TODO: change
-        "Niet goed": 6,
-        "Goed": 4,
-        "Duidelijk": 5,
-        "Helemaal niet duidelijk": 6,
-        "Onbestemde positie in ground truth": 5,
-        "Niet duidelijk": 5,
-        "Zeer duidelijk": 4,
+        "Volledig fout": os.getenv("EXTRACTION_FEEDBACK_0"),
+        "Deels fout": os.getenv("EXTRACTION_FEEDBACK_1"),
+        "Grotendeels correct": os.getenv("EXTRACTION_FEEDBACK_2"),
+        "Volledig correct": os.getenv("EXTRACTION_FEEDBACK_3"),
+        "Geen positie in ground truth": os.getenv("DETECTION_FEEDBACK_NONEXISTENT"),
+        "Niet goed": os.getenv("DETECTION_FEEDBACK_1"),
+        "Goed": os.getenv("DETECTION_FEEDBACK_0"),
+        "Duidelijk": os.getenv("DETECTION_FEEDBACK_0"),
+        "Helemaal niet duidelijk": os.getenv("DETECTION_FEEDBACK_1"),
+        "Onbestemde positie in ground truth": os.getenv("DETECTION_FEEDBACK_NONEXISTENT"),
+        "Niet duidelijk": os.getenv("DETECTION_FEEDBACK_1"),
+        "Zeer duidelijk": os.getenv("DETECTION_FEEDBACK_0"),
     }
     return rating_dict.get(rating, None)
 
