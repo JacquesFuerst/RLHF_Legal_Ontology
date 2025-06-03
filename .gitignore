@@ -12,3 +12,6 @@ __pycache__/
 #ignore environment settings
 .env
 
+# Ignore Jupyter Notebook checkpoints
+training_files/*
+rl-training-new/final_lora_adapters/*
