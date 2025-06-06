@@ -11,13 +11,8 @@ load_dotenv()
 # file_1 = os.getenv()
 
 
-json_files_first_doc = ['/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/model_answers/model_answers_acts_Participatiewet_most_recent_public.json',
-                        '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/model_answers/acts_rijksbegroting_model_answers.json',
-              ]
-
-json_files_2nd_doc = [  '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/model_answers/acts_besluit_Vw_model_answers.json',
-                        '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/model_answers/model_answers_facts_rijksbegrotingscyclus.json',
-              ]
+json_files_first_doc = [os.getenv("MODEL_ANSWERS__DATA_1"), os.getenv("MODEL_ANSWERS__DATA_2")]
+json_files_2nd_doc = [os.getenv("MODEL_ANSWERS__DATA_3"), os.getenv("MODEL_ANSWERS__DATA_4")]
 
 merged_data_1 = []
 merged_data_2 = []
@@ -44,7 +39,7 @@ for file in json_files_2nd_doc:
 # random.shuffle(merged_data)
 
 #TODO: add facts Vw to file before writing to first data file
-shared_file = '/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/model_answers/facts_besluit_Vw_model_answers.json'
+shared_file = os.getenv("MODEL_ANSWERS__DATA_5")
 
 with open(shared_file, 'r', encoding='utf-8') as f:
         shared_data = json.load(f)
@@ -52,14 +47,14 @@ with open(shared_file, 'r', encoding='utf-8') as f:
 file_1_data = shared_data + merged_data_1
 
 # Optionally, write to first data file
-with open('/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/participant_data/study_file_1_participatie_en_Vw_unshuffled.json', 'w', encoding='utf-8') as f:
+with open(os.getenv("DATA_FILE_1"), 'w', encoding='utf-8') as f:
     json.dump(file_1_data, f, ensure_ascii=False, indent=2)
 
 
 file_2_data = shared_data + merged_data_2
 
 # Optionally, write to first data file
-with open('/home/jacques.furst/development/RAG/flintfiller-precondition-rl/data/participant_data/study_file_2_rijksbegroting_acts_Vw_unshuffled.json', 'w', encoding='utf-8') as f:
+with open(os.getenv("DATA_FILE_2"), 'w', encoding='utf-8') as f:
     json.dump(file_2_data, f, ensure_ascii=False, indent=2)
 
 # # Reverse the list
