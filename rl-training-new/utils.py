@@ -237,7 +237,6 @@ TF-IDF based tokenization, use if needed.
 
 ########## Reward trainer ###################
 
-
 class CustomRewardTrainer(Trainer):
     def __init__(self, *args, loss_type="mse", weight_strategy=None, **kwargs):
         super().__init__(*args, **kwargs)
