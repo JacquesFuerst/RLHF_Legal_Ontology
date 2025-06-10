@@ -2,6 +2,7 @@ import torch
 
 import os
 from dotenv import load_dotenv
+import numpy as np
 
 # Load environment variables from .env file
 load_dotenv()
@@ -31,3 +32,451 @@ def count_categories(tensor, categories):
         row_counts = [torch.sum(row == category).item() for category in categories]
         counts.append(row_counts)
     return torch.tensor(counts)
+
+
+def find_best_window(long_text, ground_truth, tokenizer, window_size=512, stride=256):
+    """
+    Find the best sliding window of text that is most similar to the ground truth.
+    Uses a semantic similarity model to evaluate the windows.
+    """
+    similarity_model = SentenceTransformer('NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers')
+    similarity_model.to(device)
+    
+    # Tokenize the full text
+    tokens = tokenizer.tokenize(long_text)
+    
+    best_score = -1
+    best_window = None
+
+    
+    # Handle special cases in sequence length
+    if len(tokens) < window_size:
+        # Handle short sequences (optional: pad or skip)
+        start_indices = [0]
+    elif len(tokens) - window_size + 1 < stride:
+        # Not enough room for a second stride step
+        start_indices = [0, len(tokens) - window_size]
+    else:
+        # Standard sliding window
+        start_indices = list(range(0, len(tokens) - window_size + 1, stride))
+
+    
+    # Create sliding windows
+    for start in start_indices:
+        window_tokens = tokens[start:start + window_size]
+        window_text = tokenizer.convert_tokens_to_string(window_tokens)
+        
+        # Calculate cosine similarity with ground truth
+        embeddings = similarity_model.encode([window_text, ground_truth])
+        similarity = np.dot(embeddings[0], embeddings[1]) / (
+            np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
+        )
+        
+        if similarity > best_score:
+            best_score = similarity
+            best_window = window_tokens
+
+    # print(best_window)
+    if best_window == None:
+        print(similarity)
+        print(ground_truth)
+        print(long_text)
+    
+    return tokenizer.convert_tokens_to_string(best_window)
+
+
+# tokenize queries and answers together to provide proper context to reward model
+def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride):
+
+    """
+    Tokenization function choosing the best window in the answer using similarity score with ground truth.
+    """
+
+    response_tokens = len(tokenizer(examples["response_text"], truncation=False)[0])
+    # print(response_tokens)
+    precond_tokens = len(tokenizer(examples["precondition_text"], truncation=False)[0])
+    # print(precond_tokens)
+    pos_tokens = len(tokenizer(examples["precondition_position"], truncation=False)[0])
+    # print(pos_tokens)
+
+    precon_text = examples["precondition_text"]
+    precon_pos = examples["precondition_position"]
+    response = examples["response_text"]
+
+    # combine the text for each separate use case
+    if feedback_train == "feedback_extraction":
+        # print("Tokenizing for feedback extraction")
+        # choose the best sequence if the number of tokens is more than 512
+        num_tokens = response_tokens + precond_tokens
+        if num_tokens > max_length:
+            window_size = max_length - precond_tokens
+            stride = window_size // 2
+            ground_truth = precon_text
+            text = find_best_window(response, ground_truth, tokenizer, window_size=window_size, stride=stride)
+            # print(text)
+            # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], text)] --> batched version
+            combined_texts = f"{precon_text} {text}"
+        else:
+            # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], examples["response_text"])] --> batched version
+            combined_texts = f"{precon_text} {response}"
+    
+    
+    
+    
+    elif feedback_train == "feedback_detection":
+        # print("Tokenizing for feedback detection")
+        num_tokens = response_tokens + precond_tokens + pos_tokens
+        # print(num_tokens)
+        # print(max_length)
+        # print(examples["response_text"])
+        if num_tokens > max_length:
+            # print("We get here at all")
+            window_size = max_length - (precond_tokens + pos_tokens)
+            stride = window_size // 2
+            ground_truth = precon_text + " " + precon_pos
+            text = find_best_window(response, ground_truth, tokenizer, window_size=window_size, stride=stride)
+
+            #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], text)] --> batched version
+            
+            combined_texts = f"{precon_text} {precon_pos} {text}"
+        else:
+            #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], examples["response_text"])] --> batched version
+            combined_texts = f"{precon_text} {precon_pos} {response}"
+
+    tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
+
+    return tokenized
+
+
+def tokenize_fn_basic_batched(examples, feedback_train, tokenizer):
+    """
+    Basic tokenization with standard cutoff after 512 tokens. Made to be applied to dataset batches.
+    """
+    if feedback_train == "feedback_extraction":
+        combined_texts = [f"{c} {r}" for c, r in zip(examples["precondition_text"], examples["response_text"])]
+
+    elif feedback_train == "feedback_detection":
+        combined_texts = [f"{c} {p} {r}" for c, p, r in zip(examples["precondition_text"], examples["precondition_position"], examples["response_text"])]
+    
+    return tokenizer(combined_texts, truncation=True, padding="max_length")
+
+
+def tokenize_fn_basic(examples, feedback_train, tokenizer):
+    """
+    Basic tokenization with standard cutoff after 512 tokens.
+    """
+
+    precon_text = examples["precondition_text"]
+    precon_pos = examples["precondition_position"]
+    response = examples["response_text"]
+
+    if feedback_train == "feedback_extraction":
+        combined_texts = f"{precon_text} {response}"
+
+    elif feedback_train == "feedback_detection":
+        combined_texts = f"{precon_text} {precon_pos} {response}"
+    
+    return tokenizer(combined_texts, truncation=True, padding="max_length")
+
+
+
+
+
+""" 
+TF-IDF based tokenization, use if needed.
+"""
+
+# TODO: implement relevant sequence extraction with TFIDF if you have extra time...
+
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from transformers import AutoTokenizer
+# import re
+
+# def extract_relevant_sentences(long_text, ground_truth, tokenizer, max_tokens=MAX_LENGTH):
+#     # Extract keywords from ground truth using TF-IDF
+#     vectorizer = TfidfVectorizer(stop_words='english', max_features=20)
+
+#     gt_tokens = len(tokenizer.tokenize(ground_truth))
+#     sequence_length = int(gt_tokens * (1 + threshold_ratio))
+#     sentences = re.split(r'[.!?]+', long_text)
+    
+#     # Score sentences based on ground truth keywords
+#     all_texts = sentences + [ground_truth]
+#     tfidf_matrix = vectorizer.fit_transform(all_texts)
+    
+#     # Get ground truth vector (last item)
+#     gt_vector = tfidf_matrix[-1]
+    
+#     # Calculate similarity scores for each sentence
+#     sentence_scores = []
+#     for i, sentence in enumerate(sentences):
+#         if sentence.strip():
+#             similarity = (tfidf_matrix[i] * gt_vector.T).toarray()[0, 0]
+#             sentence_scores.append((sentence, similarity))
+    
+#     # Sort by relevance and select top sentences
+#     sentence_scores.sort(key=lambda x: x[1], reverse=True)
+    
+#     selected_text = ""
+#     for sentence, score in sentence_scores:
+#         test_text = selected_text + " " + sentence
+#         if len(tokenizer.tokenize(test_text)) <= max_tokens:
+#             selected_text = test_text
+#         else:
+#             break
+    
+#     return selected_text.strip()
+
+
+
+
+
+
+
+
+
+########## Reward trainer ###################
+
+
+class CustomRewardTrainer(Trainer):
+    def __init__(self, *args, loss_type="mse", weight_strategy=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.loss_type = loss_type  # "mse", "huber", or custom
+        self.weight_strategy = weight_strategy  # "linear", "inverse", or None
+
+    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
+        # Extract labels (ratings) and optional sample weights
+        labels = inputs.pop("labels").float()  # Shape: (batch_size)
+        
+        # Optional: Compute sample weights dynamically
+        weights = self._get_sample_weights(labels) if self.weight_strategy else None
+        
+        # Forward pass
+        outputs = model(**inputs)
+        logits = outputs.logits.squeeze()  # Shape: (batch_size) --> logits are the predicted rewards in this case
+        
+        # Custom loss calculation
+        loss = self._compute_custom_loss(logits, labels, weights)
+        
+        return (loss, outputs) if return_outputs else loss
+
+    def _compute_custom_loss(self, logits, labels, weights=None):
+        if self.loss_type == "mse":
+            loss = F.mse_loss(logits, labels, reduction="none") # --> MSE provides precise regression BUT sensitive to outliers
+        elif self.loss_type == "huber":
+            loss = F.huber_loss(logits, labels, reduction="none", delta=1.0) #--> balances between MSE and MAE for data that has outliers/ noise
+        else:
+            raise ValueError(f"Unsupported loss type: {self.loss_type}")
+
+        # Apply sample weights if provided
+        if weights is not None:
+            loss = loss * weights
+            loss = loss.mean()  # Normalize by mean if weights are unnormalized
+        else:
+            loss = loss.mean()
+        
+        return loss
+
+    def _get_sample_weights(self, labels):
+        """
+        Generate sample weights based on rating values.
+        
+        
+        """
+        if self.weight_strategy == "linear":
+            # Linear weighting (e.g., emphasize extremes)
+            weights = torch.abs(labels - labels.mean()) + 1.0
+        elif self.weight_strategy == "inverse":
+            # Inverse frequency weighting (if ratings are skewed)
+            unique, counts = torch.unique(labels, return_counts=True)
+            freq = counts.float() / len(labels)
+            weight_map = 1.0 / (freq + 1e-6)  # Avoid division by zero
+            weights = torch.tensor([weight_map[(unique == lbl).nonzero().item()] for lbl in labels])
+        else:
+            weights = None
+        
+        return weights.to(labels.device) if weights is not None else None
+
+
+
+    def compute_metrics(self, eval_preds):
+        predictions, labels = eval_preds
+        predictions = predictions.squeeze()
+        
+        # Regression metrics
+        mse = mean_squared_error(labels, predictions)
+        pearson = pearsonr(labels, predictions)[0] # Pearson correlation coefficient
+        
+        # Threshold accuracy --> 
+        tolerance_acc = (np.abs(predictions - labels) <= 0.5).mean()
+        
+        return {"mse": mse, "pearson": pearson, "tolerance_acc": tolerance_acc}
+    
+
+
+    
+    #TODO: evaluate whether the plotting should be done or whether it is redundant to add them
+
+    # def evaluation_loop(self, *args, **kwargs):
+    #     output = super().evaluation_loop(*args, **kwargs)
+    #     predictions = output.predictions.squeeze()
+    #     labels = output.label_ids
+        
+    #     # Generate plots (saved to disk or logged to W&B)
+    #     plot_distributions(predictions, labels, self.state.epoch)
+    #     plot_calibration(predictions, labels)
+        
+    #     return output
+
+
+
+
+
+
+
+
+
+
+
+"""
+Other useful training things, look at later if needed.
+"""
+
+
+#TODO: debug if this is truly needed...
+
+# add distributioncallback to trianing to evaluate 
+
+# class DistributionCallback(TrainerCallback):
+#     def on_evaluate(self, args, state, control, metrics, **kwargs):
+#         # Get predictions and labels from the trainer's eval loop
+#         eval_results = trainer.evaluate()
+#         predictions = eval_results["eval_predictions"]
+#         labels = eval_results["eval_labels"]
+        
+#         # Log histogram to W&B
+#         wandb.log({
+#             "reward_histogram": wandb.Histogram(predictions),
+#             "true_ratings_histogram": wandb.Histogram(labels),
+#         })
+
+
+# def plot_distributions(predictions, labels, epoch):
+#     plt.figure(figsize=(10, 4))
+#     plt.subplot(1, 2, 1)
+#     plt.hist(predictions, bins=20, alpha=0.7, label="Predicted")
+#     plt.title("Predicted Rewards")
+    
+#     plt.subplot(1, 2, 2)
+#     plt.hist(labels, bins=20, alpha=0.7, label="True Ratings", color="orange")
+#     plt.title("True Ratings")
+    
+#     plt.savefig(f"distributions_epoch_{epoch}.png")
+#     plt.close()
+
+# class PlotCallback(TrainerCallback):
+#     def on_evaluate(self, args, state, control, **kwargs):
+#         predictions = trainer.predict(test_dataset).predictions.squeeze()
+#         labels = test_dataset["ratings"]
+#         plot_distributions(predictions, labels, state.epoch)
+
+
+
+
+# def plot_calibration(predictions, labels):
+#     """
+#     Function to check if the sdfs
+
+    
+
+#     """
+#     bin_means = np.linspace(1, 5, num=5)  # For 1-5 ratings
+#     bin_centers = []
+#     empirical_means = []
+    
+#     for i in range(len(bin_means) - 1):
+#         mask = (labels >= bin_means[i]) & (labels < bin_means[i+1])
+#         if mask.sum() > 0:
+#             bin_centers.append((bin_means[i] + bin_means[i+1]) / 2)
+#             empirical_means.append(predictions[mask].mean())
+    
+#     plt.plot(bin_centers, empirical_means, marker="o")
+#     plt.plot([1, 5], [1, 5], linestyle="--", color="gray")  # Ideal line
+#     plt.xlabel("True Rating")
+#     plt.ylabel("Predicted Reward")
+#     plt.savefig("calibration_plot.png")
+
+
+
+
+# from transformers import DefaultDataCollator
+
+# #TODO: only do this if the labels fix does not work for some reason
+
+# class RewardDataCollator(DefaultDataCollator):
+#     def __call__(self, features):
+
+#         ratings = [f.pop("rating") for f in features]  # Removes rating from features temporarily
+#         batch = super().__call__(features)
+#         # Explicitly ensure rating is included
+#         print(features)
+#         # Re-inject ratings into the batch
+#         batch["rating"] = torch.tensor(ratings, dtype=torch.float32)
+#         return batch
+
+
+#################### Reward function RL training #################################
+
+class CustomRewardFunction:
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0):
+        """
+        Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
+        Args:
+            reward_model_extraction (AutoModelForSequenceClassification): Model for extracting preconditions.
+            reward_model_detection (AutoModelForSequenceClassification): Model for detecting preconditions.
+            reward_tokenizer (AutoTokenizer): Tokenizer for processing input text.
+            weight_extraction (float): Weight for the extraction reward.
+            weight_detection (float): Weight for the detection reward.
+        """
+        self.weight_extraction = weight_extraction
+        self.weight_detection = weight_detection
+        self.reward_model_extraction = reward_model_extraction
+        self.reward_model_detection = reward_model_detection
+        self.reward_tokenizer = reward_tokenizer
+        self.max_length = max_length
+        self.stride = stride
+        self.device = device
+        self.rl_tokenization = rl_tokenization
+
+    def __call__(self, response, prompt, precondition_texts, precondition_positions):
+        """
+        This function was written assuming that the precondition positions and precondition texts are passed aas a dictionary that is stored for the respective prompt in the prompt dataset TODO: --> double-check!!!
+        """
+
+        with torch.no_grad():
+            total_reward_extraction = 0
+            total_reward_detection = 0
+
+            # iterate over all preconditions and give reward for response cumulatively
+            for condition_id in precondition_texts.keys():
+
+                extraction_text = precondition_texts[condition_id] + " " + response
+                detection_text = precondition_texts[condition_id] + " " + precondition_positions[condition_id] + " " + response
+
+
+                if self.rl_tokenization == "basic":
+                    inputs_extraction = tokenize_fn_basic(extraction_text, "feedback_extraction", self.reward_tokenizer).to(self.device)
+                    inputs_detection = tokenize_fn_basic(detection_text, "feedback_detection", self.reward_tokenizer).to(self.device)
+                elif self.rl_tokenization == "best_window":
+                    inputs_extraction = tokenize_fn_basic(extraction_text, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride).to(self.device)
+                    inputs_detection = tokenize_fn_basic(detection_text, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride).to(self.device)
+                
+                outputs_extraction = self.reward_model_extraction(**inputs_extraction)
+                outputs_detection = self.reward_model_detection(**inputs_detection)
+                
+                total_reward_extraction += outputs_extraction.logits.item()
+                total_reward_detection += outputs_detection.logits.item()
+
+            
+
+            return self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection
