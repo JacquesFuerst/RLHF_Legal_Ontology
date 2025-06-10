@@ -3,6 +3,12 @@ import torch
 import os
 from dotenv import load_dotenv
 import numpy as np
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+from sentence_transformers import SentenceTransformer
+from torch.nn import functional as F
+from transformers import Trainer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,7 +40,7 @@ def count_categories(tensor, categories):
     return torch.tensor(counts)
 
 
-def find_best_window(long_text, ground_truth, tokenizer, window_size=512, stride=256):
+def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512, stride=256):
     """
     Find the best sliding window of text that is most similar to the ground truth.
     Uses a semantic similarity model to evaluate the windows.
@@ -75,18 +81,12 @@ def find_best_window(long_text, ground_truth, tokenizer, window_size=512, stride
         if similarity > best_score:
             best_score = similarity
             best_window = window_tokens
-
-    # print(best_window)
-    if best_window == None:
-        print(similarity)
-        print(ground_truth)
-        print(long_text)
     
     return tokenizer.convert_tokens_to_string(best_window)
 
 
 # tokenize queries and answers together to provide proper context to reward model
-def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride):
+def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride, device):
 
     """
     Tokenization function choosing the best window in the answer using similarity score with ground truth.
@@ -112,7 +112,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             window_size = max_length - precond_tokens
             stride = window_size // 2
             ground_truth = precon_text
-            text = find_best_window(response, ground_truth, tokenizer, window_size=window_size, stride=stride)
+            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
             # print(text)
             # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], text)] --> batched version
             combined_texts = f"{precon_text} {text}"
@@ -134,7 +134,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             window_size = max_length - (precond_tokens + pos_tokens)
             stride = window_size // 2
             ground_truth = precon_text + " " + precon_pos
-            text = find_best_window(response, ground_truth, tokenizer, window_size=window_size, stride=stride)
+            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
 
             #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], text)] --> batched version
             
@@ -468,8 +468,8 @@ class CustomRewardFunction:
                     inputs_extraction = tokenize_fn_basic(extraction_text, "feedback_extraction", self.reward_tokenizer).to(self.device)
                     inputs_detection = tokenize_fn_basic(detection_text, "feedback_detection", self.reward_tokenizer).to(self.device)
                 elif self.rl_tokenization == "best_window":
-                    inputs_extraction = tokenize_fn_basic(extraction_text, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride).to(self.device)
-                    inputs_detection = tokenize_fn_basic(detection_text, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride).to(self.device)
+                    inputs_extraction = tokenize_fn_with_best_window(extraction_text, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device).to(self.device)
+                    inputs_detection = tokenize_fn_with_best_window(detection_text, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device).to(self.device)
                 
                 outputs_extraction = self.reward_model_extraction(**inputs_extraction)
                 outputs_detection = self.reward_model_detection(**inputs_detection)
