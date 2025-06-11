@@ -10,6 +10,8 @@ from sentence_transformers import SentenceTransformer
 from torch.nn import functional as F
 from transformers import Trainer
 
+import ast
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -86,14 +88,14 @@ def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512
 
 
 # tokenize queries and answers together to provide proper context to reward model
-def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride, device):
+def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride, device, rl_training=False):
 
     """
     Tokenization function choosing the best window in the answer using similarity score with ground truth.
     """
-
+    # print("response text", examples["response_text"])
     response_tokens = len(tokenizer(examples["response_text"], truncation=False)[0])
-    # print(response_tokens)
+    
     precond_tokens = len(tokenizer(examples["precondition_text"], truncation=False)[0])
     # print(precond_tokens)
     pos_tokens = len(tokenizer(examples["precondition_position"], truncation=False)[0])
@@ -143,7 +145,11 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], examples["response_text"])] --> batched version
             combined_texts = f"{precon_text} {precon_pos} {response}"
 
-    tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
+    #Only return pytorch tensors if doing RL training loop
+    if rl_training:
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length")
+    else:
+        tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
 
     return tokenized
 
@@ -427,7 +433,7 @@ Other useful training things, look at later if needed.
 #################### Reward function RL training #################################
 
 class CustomRewardFunction:
-    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0):
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, detection_difference=5):
         """
         Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
         Args:
@@ -446,36 +452,64 @@ class CustomRewardFunction:
         self.stride = stride
         self.device = device
         self.rl_tokenization = rl_tokenization
+        self.detection_difference = detection_difference
 
-    def __call__(self, response, prompt, precondition_texts, precondition_positions):
+        self.__name__ = "precondition_reward_function"
+
+    def __call__(self, prompts, completions, completion_ids, **kwargs):
         """
         This function was written assuming that the precondition positions and precondition texts are passed aas a dictionary that is stored for the respective prompt in the prompt dataset TODO: --> double-check!!!
         """
+        #TODO: for several batched samples and prompts here...
+        # print(kwargs.keys())
+        precondition_texts_list = kwargs["precondition_texts"]
+        precondition_positions_list = kwargs["precondition_positions"]
+
+        # print(precondition_texts_list)
+
+        prompt_rewards = []
 
         with torch.no_grad():
             total_reward_extraction = 0
             total_reward_detection = 0
 
-            # iterate over all preconditions and give reward for response cumulatively
-            for condition_id in precondition_texts.keys():
+            for prompt, response, precondition_texts, precondition_positions in zip(prompts, completions, precondition_texts_list, precondition_positions_list):
 
-                extraction_text = precondition_texts[condition_id] + " " + response
-                detection_text = precondition_texts[condition_id] + " " + precondition_positions[condition_id] + " " + response
+                precondition_texts_dict = ast.literal_eval(precondition_texts)
+                precondition_positions_dict = ast.literal_eval(precondition_positions)
+
+                # print(f"precondition texts keys: {precondition_positions_dict.keys()}")
+
+                # iterate over all preconditions and give reward for response cumulatively
+                for condition_id in precondition_texts_dict.keys():
+
+                    # extraction_text = precondition_texts_dict[condition_id] + " " + response
+                    # detection_text = precondition_texts_dict[condition_id] + " " + precondition_positions_dict[condition_id] + " " + response
+                    inputs = {}
+                    inputs["precondition_text"] = precondition_texts_dict[condition_id]
+                    inputs["precondition_position"] = precondition_positions_dict[condition_id]
+                    inputs["response_text"] = response
 
 
-                if self.rl_tokenization == "basic":
-                    inputs_extraction = tokenize_fn_basic(extraction_text, "feedback_extraction", self.reward_tokenizer).to(self.device)
-                    inputs_detection = tokenize_fn_basic(detection_text, "feedback_detection", self.reward_tokenizer).to(self.device)
-                elif self.rl_tokenization == "best_window":
-                    inputs_extraction = tokenize_fn_with_best_window(extraction_text, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device).to(self.device)
-                    inputs_detection = tokenize_fn_with_best_window(detection_text, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device).to(self.device)
+                    if self.rl_tokenization == "basic":
+                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer).to(self.device)
+                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer).to(self.device)
+                    elif self.rl_tokenization == "best_window":
+                        inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
+                        inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
+
+                    # pass tensors into reward models
+                    outputs_extraction = self.reward_model_extraction(**inputs_extraction)
+                    outputs_detection = self.reward_model_detection(**inputs_detection)
+                    
+                    # add up rewads for all preconditions
+                    total_reward_extraction += outputs_extraction.logits.item()
+                    total_reward_detection += (outputs_detection.logits.item() - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
                 
-                outputs_extraction = self.reward_model_extraction(**inputs_extraction)
-                outputs_detection = self.reward_model_detection(**inputs_detection)
-                
-                total_reward_extraction += outputs_extraction.logits.item()
-                total_reward_detection += outputs_detection.logits.item()
+                # add total prompt reward to list of prompt rewards
+                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection
+                prompt_rewards.append(prompt_reward)
 
-            
+            # print(f"prompt rewards: {prompt_rewards}")
 
-            return self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection
+            return torch.tensor(prompt_rewards)

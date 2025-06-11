@@ -13,5 +13,5 @@ __pycache__/
 .env
 
 # Ignore Jupyter Notebook checkpoints
-training_files/*
-rl-training-new/final_lora_adapters/*
+reward_training_files/*
+rl_training_files/*
