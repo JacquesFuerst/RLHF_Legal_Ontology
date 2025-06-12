@@ -477,6 +477,10 @@ class CustomRewardFunction:
 
                 precondition_texts_dict = ast.literal_eval(precondition_texts)
                 precondition_positions_dict = ast.literal_eval(precondition_positions)
+                prompt_reward = 0
+                # print(prompt_reward)
+                total_reward_detection = 0
+                total_reward_extraction = 0
 
                 # print(f"precondition texts keys: {precondition_positions_dict.keys()}")
 
@@ -507,9 +511,16 @@ class CustomRewardFunction:
                     total_reward_detection += (outputs_detection.logits.item() - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
                 
                 # add total prompt reward to list of prompt rewards
-                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection
+                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  # Divide by 100 to maybe have more stable training
                 prompt_rewards.append(prompt_reward)
+
+            
+            # subtract mean and divide by standard deviation for the rewards
+            mean = np.mean(prompt_rewards)
+            std = np.std(prompt_rewards)   
+
+            normalized_prompt_rewards = [(r - mean) / std for r in prompt_rewards]
 
             # print(f"prompt rewards: {prompt_rewards}")
 
-            return torch.tensor(prompt_rewards)
+            return torch.tensor(normalized_prompt_rewards)
