@@ -21,6 +21,7 @@ from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Optional, Union
+import copy
 
 import numpy as np
 import pandas as pd
@@ -72,10 +73,6 @@ from trl.trainer.utils import (
     truncate_response,
 )
 
-#############
-from utils import CustomRewardFunction
-############
-
 
 if is_peft_available():
     from peft import PeftConfig, PeftModel, get_peft_model
@@ -85,6 +82,8 @@ if is_wandb_available():
 
 
 INVALID_LOGPROB = 1.0
+
+
 
 
 # taken from https://github.com/OpenLMLab/MOSS-RLHF/blob/40b91eb2f2b71b16919addede0341d2bef70825d/ppo/ppo_trainer.py#L29
@@ -432,8 +431,10 @@ class CustomPPOTrainer(Trainer):
 
                 ##################
                 #TODO: somehow get the precondition texts and positions out of dataloader here
-                precondition_texts_list_queries = data["precondition_texts"].to(device)
-                precondition_positions_list_queries = data["precondition_positions"].to(device)
+                print(f"Queries: {queries}")
+                prompt_list = data["additional_entries"][0]
+                precondition_texts_list_queries = data["additional_entries"][1]
+                precondition_positions_list_queries = data["additional_entries"][2]
                 ##################
                 context_length = queries.shape[1]
                 responses = []
@@ -458,8 +459,9 @@ class CustomPPOTrainer(Trainer):
                     query = queries[i : i + args.local_rollout_forward_batch_size]
                     ########################
                     #TODO: get proper precondition position and text here
-                    precondition_texts = precondition_texts_list_queries[i : i + args.local_rollout_forward_batch_size]
-                    precondition_positions = precondition_positions_list_queries[i : i + args.local_rollout_forward_batch_size]
+                    prompts_batch = prompt_list[i : i + args.local_rollout_forward_batch_size]
+                    precondition_texts_batch = precondition_texts_list_queries[i : i + args.local_rollout_forward_batch_size]
+                    precondition_positions_batch = precondition_positions_list_queries[i : i + args.local_rollout_forward_batch_size]
                     #TODO: figure out proper format of query responses
                     ########################
                     query_response = query_responses[i : i + args.local_rollout_forward_batch_size]
@@ -488,6 +490,7 @@ class CustomPPOTrainer(Trainer):
                         )
 
                     # Response Processing 2. run reward model on the truncated responses
+                    #TODO: somehow just pass query an response into reward funciton here
                     postprocessed_query_response = torch.cat((query, postprocessed_response), 1)
                     sequence_length = first_true_indices(postprocessed_response == processing_class.pad_token_id) - 1
                     unwrapped_value_model = accelerator.unwrap_model(model).value_model
@@ -506,8 +509,10 @@ class CustomPPOTrainer(Trainer):
                     #TODO: find out how they get query here
                     #TODO: somehow need to manage to just get the original texts for queries and responses here, my class should handle rest...
                     print(f"Postprocessed query and response batch: {postprocessed_query_response}")
+                    print(f"Query as passed into reward model: {query}")
+                    print(f"Response as passed into reward model: {response}")
                     _, score, _ = self.reward_func(
-                        query_response, processing_class.pad_token_id, context_length, precondition_texts, precondition_positions
+                        query, response, processing_class.pad_token_id, context_length, precondition_texts_batch, precondition_positions_batch
                         
                     )
                     ########################

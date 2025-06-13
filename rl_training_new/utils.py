@@ -8,7 +8,10 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from sentence_transformers import SentenceTransformer
 from torch.nn import functional as F
-from transformers import Trainer
+from transformers import Trainer, DataCollatorWithPadding
+
+import torch.nn as nn
+from transformers import AutoModelForCausalLM
 
 import ast
 
@@ -580,13 +583,13 @@ class CustomRewardFunctionPPOTrainer:
 
         self.__name__ = "precondition_reward_function"
 
-    def __call__(self, query_responses, pad_token_id, context_length, precondition_texts_list, precondition_positions_list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, query, response, pad_token_id, context_length, precondition_texts_list, precondition_positions_list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         This function was written assuming that the precondition positions and precondition texts are passed aas a dictionary that is stored for the respective prompt in the prompt dataset TODO: --> double-check!!!
         """
         #TODO: figure out format of the query_responses 
 
-        print(f"{query_responses}")
+        # print(f"{query_responses}")
 
         prompt_rewards = []
 
@@ -594,7 +597,7 @@ class CustomRewardFunctionPPOTrainer:
             total_reward_extraction = 0
             total_reward_detection = 0
 
-            for prompt, response, precondition_texts, precondition_positions in zip(prompts, completions, precondition_texts_list, precondition_positions_list):
+            for prompt, response, precondition_texts, precondition_positions in zip(query, response, precondition_texts_list, precondition_positions_list):
 
                 precondition_texts_dict = ast.literal_eval(precondition_texts)
                 precondition_positions_dict = ast.literal_eval(precondition_positions)
@@ -653,6 +656,44 @@ class CustomRewardFunctionPPOTrainer:
             sequence_lengths,
         ].squeeze(-1),
                     )
+
+
+##############################################################
+# Custom data collator that does not pad label column
+
+class LabelPreservingCollator(DataCollatorWithPadding):
+    def __call__(self, features):
+        # Extract labels (remove from features temporarily)
+        labels = [f.pop("additional_entries") for f in features]
+
+        # Use parent collator for everything else (tokenizer padding etc)
+        batch = super().__call__(features)
+
+        # Re-attach original labels without modification
+        batch["additional_entries"] = labels
+
+        return batch
+##############################################################
+
+
+# #######################
+
+# # Value head model for PPO
+
+# class ValueHeadModel(nn.Module):
+#     def __init__(self, base_model_name):
+#         super().__init__()
+#         self.model = AutoModelForCausalLM.from_pretrained(base_model_name, output_hidden_states=True)
+#         self.value_head = nn.Linear(self.model.config.hidden_size, 1)
+
+#     def forward(self, input_ids, attention_mask=None, **kwargs):
+#         output = self.model(input_ids=input_ids, attention_mask=attention_mask, **kwargs)
+#         hidden_states = output.hidden_states[-1]
+#         values = self.value_head(hidden_states).squeeze(-1)
+#         return output, values
+
+#     def score(self, hidden_states):
+#         return self.value_head(hidden_states).squeeze(-1)
 
 
 
