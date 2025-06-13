@@ -524,3 +524,139 @@ class CustomRewardFunction:
             # print(f"prompt rewards: {prompt_rewards}")
 
             return torch.tensor(normalized_prompt_rewards)
+        
+
+
+################################################# Copied from TRL trainer.utils ######################################################
+
+def first_true_indices(bools: torch.Tensor, dtype=torch.long):
+    """
+    Takes an N-dimensional bool tensor and returns an (N-1)-dimensional tensor of integers giving
+    the position of the first True in each "row".
+
+    Returns the length of the rows (bools.size(-1)) if no element is True in a given row.
+
+    Args:
+        bools (`torch.Tensor`):
+            An N-dimensional boolean tensor.
+        dtype (`torch.dtype`, optional):
+            The desired data type of the output tensor. Defaults to `torch.long`.
+
+    Returns:
+        `torch.Tensor`:
+            An (N-1)-dimensional tensor of integers indicating the position of the first True
+            in each row. If no True value is found in a row, returns the length of the row.
+    """
+    row_len = bools.size(-1)
+    zero_or_index = row_len * (~bools).type(dtype) + torch.arange(row_len, dtype=dtype, device=bools.device)
+    return torch.min(zero_or_index, dim=-1).values
+
+##############################################################################################################################################
+
+
+
+
+class CustomRewardFunctionPPOTrainer:
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, detection_difference=5):
+        """
+        Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
+        Args:
+            reward_model_extraction (AutoModelForSequenceClassification): Model for extracting preconditions.
+            reward_model_detection (AutoModelForSequenceClassification): Model for detecting preconditions.
+            reward_tokenizer (AutoTokenizer): Tokenizer for processing input text.
+            weight_extraction (float): Weight for the extraction reward.
+            weight_detection (float): Weight for the detection reward.
+        """
+        self.weight_extraction = weight_extraction
+        self.weight_detection = weight_detection
+        self.reward_model_extraction = reward_model_extraction
+        self.reward_model_detection = reward_model_detection
+        self.reward_tokenizer = reward_tokenizer
+        self.max_length = max_length
+        self.stride = stride
+        self.device = device
+        self.rl_tokenization = rl_tokenization
+        self.detection_difference = detection_difference
+
+        self.__name__ = "precondition_reward_function"
+
+    def __call__(self, query_responses, pad_token_id, context_length, precondition_texts_list, precondition_positions_list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        This function was written assuming that the precondition positions and precondition texts are passed aas a dictionary that is stored for the respective prompt in the prompt dataset TODO: --> double-check!!!
+        """
+        #TODO: figure out format of the query_responses 
+
+        print(f"{query_responses}")
+
+        prompt_rewards = []
+
+        with torch.no_grad():
+            total_reward_extraction = 0
+            total_reward_detection = 0
+
+            for prompt, response, precondition_texts, precondition_positions in zip(prompts, completions, precondition_texts_list, precondition_positions_list):
+
+                precondition_texts_dict = ast.literal_eval(precondition_texts)
+                precondition_positions_dict = ast.literal_eval(precondition_positions)
+                prompt_reward = 0
+                # print(prompt_reward)
+                total_reward_detection = 0
+                total_reward_extraction = 0
+
+                # print(f"precondition texts keys: {precondition_positions_dict.keys()}")
+
+                # iterate over all preconditions and give reward for response cumulatively
+                for condition_id in precondition_texts_dict.keys():
+
+                    # extraction_text = precondition_texts_dict[condition_id] + " " + response
+                    # detection_text = precondition_texts_dict[condition_id] + " " + precondition_positions_dict[condition_id] + " " + response
+                    inputs = {}
+                    inputs["precondition_text"] = precondition_texts_dict[condition_id]
+                    inputs["precondition_position"] = precondition_positions_dict[condition_id]
+                    inputs["response_text"] = response
+
+
+                    if self.rl_tokenization == "basic":
+                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer).to(self.device)
+                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer).to(self.device)
+                    elif self.rl_tokenization == "best_window":
+                        inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
+                        inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
+
+                    # pass tensors into reward models
+                    outputs_extraction = self.reward_model_extraction(**inputs_extraction)
+                    outputs_detection = self.reward_model_detection(**inputs_detection)
+                    
+                    # add up rewads for all preconditions
+                    total_reward_extraction += outputs_extraction.logits.item()
+                    total_reward_detection += (outputs_detection.logits.item() - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
+                
+                # add total prompt reward to list of prompt rewards
+                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  # Divide by 100 to maybe have more stable training
+                prompt_rewards.append(prompt_reward)
+
+            
+            # subtract mean and divide by standard deviation for the rewards
+            mean = np.mean(prompt_rewards)
+            std = np.std(prompt_rewards)   
+
+            normalized_prompt_rewards = [(r - mean) / std for r in prompt_rewards]
+
+            # print(f"prompt rewards: {prompt_rewards}")
+            reward_logits = torch.tensor(normalized_prompt_rewards)
+            sequence_lengths = first_true_indices(query_responses[:, context_length:] == pad_token_id) - 1 + context_length
+
+            return (
+                None,
+                reward_logits[
+            torch.arange(reward_logits.size(0), device=reward_logits.device),
+            sequence_lengths,
+        ].squeeze(-1),
+                    )
+
+
+
+
+
+
+
