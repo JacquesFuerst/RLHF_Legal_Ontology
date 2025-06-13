@@ -455,7 +455,9 @@ class CustomPPOTrainer(Trainer):
                         generation_config,
                     )
 
+                #TODO: this loop somehow 
                 for i in range(0, queries.shape[0], args.local_rollout_forward_batch_size):
+                    #TODO: figure out why queries are chopped up here, how to change this and make PPO work...
                     query = queries[i : i + args.local_rollout_forward_batch_size]
                     ########################
                     #TODO: get proper precondition position and text here
@@ -508,9 +510,11 @@ class CustomPPOTrainer(Trainer):
                     # , postprocessed_query_response, processing_class.pad_token_id, context_length
                     #TODO: find out how they get query here
                     #TODO: somehow need to manage to just get the original texts for queries and responses here, my class should handle rest...
+                    decoded_query = processing_class.batch_decode(queries)
+                    decoded_response = processing_class.batch_decode(query_response)
                     print(f"Postprocessed query and response batch: {postprocessed_query_response}")
-                    print(f"Query as passed into reward model: {query}")
-                    print(f"Response as passed into reward model: {response}")
+                    print(f"Query as passed into reward model: {decoded_query}")
+                    print(f"Response as passed into reward model: {decoded_response}")
                     _, score, _ = self.reward_func(
                         query, response, processing_class.pad_token_id, context_length, precondition_texts_batch, precondition_positions_batch
                         
