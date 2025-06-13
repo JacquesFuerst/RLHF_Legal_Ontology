@@ -15,3 +15,4 @@ __pycache__/
 # Ignore Jupyter Notebook checkpoints
 reward_training_files/*
 rl_training_files/*
+rl_training_new/wandb/*
