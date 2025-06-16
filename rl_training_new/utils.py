@@ -647,14 +647,15 @@ class CustomRewardFunctionPPOTrainer:
 
             # print(f"prompt rewards: {prompt_rewards}")
             reward_logits = torch.tensor(normalized_prompt_rewards)
-            sequence_lengths = first_true_indices(query_responses[:, context_length:] == pad_token_id) - 1 + context_length
+
+            #TODO: figure out how to retunr the rewards in proper order here...
+            # No need to order rewards since I give one reward per sequence, not a token-specific reward...
+            # sequence_lengths = first_true_indices(query_responses[:, context_length:] == pad_token_id) - 1 + context_length
 
             return (
                 None,
-                reward_logits[
-            torch.arange(reward_logits.size(0), device=reward_logits.device),
-            sequence_lengths,
-        ].squeeze(-1),
+                reward_logits,
+                None
                     )
 
 
