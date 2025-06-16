@@ -667,6 +667,7 @@ class LabelPreservingCollator(DataCollatorWithPadding):
         labels = [f.pop("additional_entries") for f in features]
 
         # Use parent collator for everything else (tokenizer padding etc)
+        # print(f"Data collaotr features {features}")
         batch = super().__call__(features)
 
         # Re-attach original labels without modification

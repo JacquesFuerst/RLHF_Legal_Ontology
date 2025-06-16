@@ -115,6 +115,7 @@ class CustomPPOTrainer(Trainer):
         ######################
         #TODO: configure custom reward model arguments in here properly
         reward_func,
+        # collator_max_length: int,
         ######################
         # reward_model: nn.Module,
         train_dataset: Dataset,
@@ -136,22 +137,25 @@ class CustomPPOTrainer(Trainer):
         self.processing_class = processing_class
         self.policy_model = model
 
+        #TODO: added datacollator max length here
+        # self.collator_max_length=collator_max_length
+
         # Define the collator if not provided
         if data_collator is None:
-            data_collator = DataCollatorWithPadding(self.processing_class)
+            data_collator = DataCollatorWithPadding(self.processing_class) #TODO: changed max length here
 
         # Handle stop token settings: update policy model's generation_config to use provided stop token
         if args.stop_token and args.stop_token_id:
             raise ValueError("You cannot set both `stop_token` and `stop_token_id`.")
         elif args.stop_token:
             if args.stop_token == "eos":
-                self.policy_model.generation_config.eos_token_id = self.stop_token_id = processing_class.eos_token_id
+                self.policy_model.pretrained_model.generation_config.eos_token_id = self.stop_token_id = processing_class.eos_token_id
             else:
                 raise ValueError(
                     f"Unknown `stop_token` {args.stop_token}. Allowed values are: `'eos'` and `None` (no stop token)."
                 )
         else:
-            self.policy_model.generation_config.eos_token_id = self.stop_token_id = args.stop_token_id  # None or int
+            self.policy_model.pretrained_model.generation_config.eos_token_id = self.stop_token_id = args.stop_token_id  # None or int
 
         # Check that the kl estimator is valid
         if self.args.kl_estimator not in {"k1", "k3"}:
@@ -210,6 +214,8 @@ class CustomPPOTrainer(Trainer):
         args.local_batch_size = args.per_device_train_batch_size * args.gradient_accumulation_steps
         args.micro_batch_size = int(args.per_device_train_batch_size * args.world_size)
         args.batch_size = int(args.local_batch_size * args.world_size)
+        # print(f"batch size: {args.batch_size}")
+        # print(f"Local batch size: {args.local_batch_size}")
         args.mini_batch_size = exact_div(
             args.batch_size, args.num_mini_batches, "`batch_size` must be a multiple of `num_mini_batches`"
         )
@@ -287,6 +293,8 @@ class CustomPPOTrainer(Trainer):
             collate_fn=self.data_collator,
             drop_last=True,  # needed; otherwise the last batch will be of ragged shape
         )
+
+        
         # sync random states for DataLoader(shuffle=True) before `accelerator.prepare`
         # see https://gist.github.com/vwxyzjn/2581bff1e48e185e0b85b6dfe1def79c
         torch.manual_seed(args.seed)
@@ -373,6 +381,8 @@ class CustomPPOTrainer(Trainer):
                 yield from dataloader
 
         iter_dataloader = iter(repeat_generator())
+        # print(f"Response length: {args.response_length}")
+        # print(f"First dataloader batch: {next(iter_dataloader)}")
         generation_config = GenerationConfig(
             max_new_tokens=args.response_length,
             temperature=(args.temperature + 1e-7),
@@ -425,13 +435,15 @@ class CustomPPOTrainer(Trainer):
             self.state.episode += 1 * args.batch_size
             data = next(iter_dataloader)
             #TODO: check proper data column handling
-            print(f"")
+            # print(f"")
             with torch.no_grad():
                 queries = data["input_ids"].to(device)
 
                 ##################
                 #TODO: somehow get the precondition texts and positions out of dataloader here
-                print(f"Queries: {queries}")
+                decoded_queries = processing_class.batch_decode(queries)
+                # print(f"Decoded queries beginning: {decoded_queries}")
+                # print(f"Queries: {queries}")
                 prompt_list = data["additional_entries"][0]
                 precondition_texts_list_queries = data["additional_entries"][1]
                 precondition_positions_list_queries = data["additional_entries"][2]
@@ -447,6 +459,7 @@ class CustomPPOTrainer(Trainer):
                 with unwrap_model_for_generation(
                     self.model, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
                 ) as unwrapped_model:
+                    unwrapped_model.policy.generation_config = generation_config
                     query_responses, logitss = batch_generation(
                         unwrapped_model.policy,
                         queries,
@@ -510,13 +523,17 @@ class CustomPPOTrainer(Trainer):
                     # , postprocessed_query_response, processing_class.pad_token_id, context_length
                     #TODO: find out how they get query here
                     #TODO: somehow need to manage to just get the original texts for queries and responses here, my class should handle rest...
-                    decoded_query = processing_class.batch_decode(queries)
-                    decoded_response = processing_class.batch_decode(query_response)
-                    print(f"Postprocessed query and response batch: {postprocessed_query_response}")
+                    decoded_query = processing_class.batch_decode(query, skip_special_tokens=True)
+                    decoded_response = processing_class.batch_decode(response, skip_special_tokens=True)
+
+                    print(f"ength queries, length responses: {len(decoded_query), len(decoded_response)}")
+                    # print(f"Postprocessed query and response batch: {postprocessed_query_response}")
                     print(f"Query as passed into reward model: {decoded_query}")
                     print(f"Response as passed into reward model: {decoded_response}")
+                    print(f"preconditin texts batch: {precondition_texts_batch}")
+                    print(f"Precondition positions batch: {precondition_positions_batch}")
                     _, score, _ = self.reward_func(
-                        query, response, processing_class.pad_token_id, context_length, precondition_texts_batch, precondition_positions_batch
+                        decoded_query, decoded_response, processing_class.pad_token_id, context_length, precondition_texts_batch, precondition_positions_batch
                         
                     )
                     ########################
