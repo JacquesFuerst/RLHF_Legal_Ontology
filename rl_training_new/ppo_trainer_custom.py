@@ -389,7 +389,7 @@ class CustomPPOTrainer(Trainer):
             temperature=(args.temperature + 1e-7),
             top_k=0.0,
             top_p=1.0,
-            do_sample=False, #TODO: canged this from true to false
+            do_sample=True, #TODO: canged this from true to false
         )
 
         accelerator.print("===training policy===")
@@ -553,7 +553,7 @@ class CustomPPOTrainer(Trainer):
                     # print(f"preconditin texts batch: {precondition_texts_batch}")
                     # print(f"Precondition positions batch: {precondition_positions_batch}")
                     _, score, _ = self.reward_func(
-                        decoded_query, decoded_response, processing_class.pad_token_id, context_length, precondition_texts_batch, precondition_positions_batch
+                        decoded_query, decoded_response, processing_class, response, precondition_texts_batch, precondition_positions_batch
                         
                     )
                     score.to(device)
@@ -602,7 +602,7 @@ class CustomPPOTrainer(Trainer):
                 actual_start = torch.arange(rewards.size(0), device=rewards.device)
                 actual_end = torch.where(sequence_lengths_p1 < rewards.size(1), sequence_lengths_p1, sequence_lengths).to(rewards.device)
                 scores = scores.to(rewards.device)
-                print(f"devices: {scores.device, rewards.device, actual_start.device, actual_end.device}")
+                # print(f"devices: {scores.device, rewards.device, actual_start.device, actual_end.device}")
                 rewards[[actual_start, actual_end]] += scores
 
                 # 5. whiten rewards
@@ -639,6 +639,10 @@ class CustomPPOTrainer(Trainer):
                             micro_batch_inds = mini_batch_inds[micro_batch_start:micro_batch_end]
                             mb_advantage = advantages[micro_batch_inds]
                             mb_responses = responses[micro_batch_inds]
+
+                            # print("mb responses", mb_responses)
+                            # print(f"mb responses decoded: {processing_class.batch_decode(mb_responses)}")
+
                             mb_query_responses = query_responses[micro_batch_inds]
                             mb_logprobs = logprobs[micro_batch_inds]
                             mb_return = returns[micro_batch_inds]
@@ -646,18 +650,34 @@ class CustomPPOTrainer(Trainer):
 
                             output, vpred_temp = forward(model, mb_query_responses, processing_class.pad_token_id)
                             
-                            print(type(output))
-                            print(output)
+                            # print(type(output))
+                            # print(output[0])
+                            # print([type(x) for x in output])
+                            # print(output.keys())
+                            # print([x.shape for x in output])
 
-                            print(vpred_temp)
-                            print(type(vpred_temp))
+
+                            # print(vpred_temp)
+                            # print(type(vpred_temp))
+
+                            
 
                             logits = output[0][:, context_length - 1 : -1]
+                            # logits = output[0][:, context_length :]
+                            # print(logits.shape)
+                            # print(f"Shape of mb_responses: {mb_responses.shape}")
+                            # print(f"Shape of logits before division: {output[0][:, context_length - 1 : -1].shape}")
                             logits /= args.temperature + 1e-7
                             new_logprobs = selective_log_softmax(logits, mb_responses)
                             new_logprobs = torch.masked_fill(
                                 new_logprobs, padding_mask[micro_batch_inds], INVALID_LOGPROB
                             )
+
+
+                            # print(f"Shape of new_logprobs: {new_logprobs.shape}")
+                            # print(f"Shape of mb_logprobs: {mb_logprobs.shape}")
+                            print(f"Values of new_logprobs (first few): {new_logprobs.flatten()[:5]}")
+
                             vpred = vpred_temp[:, context_length - 1 : -1].squeeze(-1)
                             vpred = torch.masked_fill(vpred, padding_mask_p1[micro_batch_inds], 0)
                             vpredclipped = torch.clamp(

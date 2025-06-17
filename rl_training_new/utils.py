@@ -583,7 +583,7 @@ class CustomRewardFunctionPPOTrainer:
 
         self.__name__ = "precondition_reward_function"
 
-    def __call__(self, query, response, pad_token_id, context_length, precondition_texts_list, precondition_positions_list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, query, response, tokenizer, response_tokenized, precondition_texts_list, precondition_positions_list) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         This function was written assuming that the precondition positions and precondition texts are passed aas a dictionary that is stored for the respective prompt in the prompt dataset TODO: --> double-check!!!
         """
@@ -597,7 +597,7 @@ class CustomRewardFunctionPPOTrainer:
             total_reward_extraction = 0
             total_reward_detection = 0
 
-            for prompt, response, precondition_texts, precondition_positions in zip(query, response, precondition_texts_list, precondition_positions_list):
+            for response_tokenized, response, precondition_texts, precondition_positions in zip(response_tokenized, response, precondition_texts_list, precondition_positions_list):
 
                 precondition_texts_dict = ast.literal_eval(precondition_texts)
                 precondition_positions_dict = ast.literal_eval(precondition_positions)
@@ -636,6 +636,12 @@ class CustomRewardFunctionPPOTrainer:
                 
                 # add total prompt reward to list of prompt rewards
                 prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  # Divide by 100 to maybe have more stable training
+                
+                # # add large negative reward if model just generates a lot of eos tokens
+                # eos_count = (response_tokenized == tokenizer.eos_token_id).sum().item()
+                # if eos_count > 1:
+                #     prompt_reward -= (eos_count - 1)
+                
                 prompt_rewards.append(prompt_reward)
 
             
