@@ -2,9 +2,10 @@ compute_environment: LOCAL_MACHINE
 deepspeed_config:
   deepspeed_config_file: deepspeed_config.json
 distributed_type: DEEPSPEED
-fp16: true
+fp16: false
+bf16: true
 machine_rank: 0
 main_training_function: main
 num_machines: 1
-num_processes: 3  # Set to >1 if multi-GPU
+num_processes: 4  # Set to >1 if multi-GPU
 use_cpu: false

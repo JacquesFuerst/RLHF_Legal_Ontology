@@ -3,22 +3,22 @@ import warnings
 warnings.filterwarnings('ignore')
 from datasets import Dataset, load_dataset
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModelForCausalLM
-from trl import PPOConfig, create_reference_model, AutoModelForCausalLMWithValueHead
+# from trl import PPOConfig, create_reference_model, AutoModelForCausalLMWithValueHead
 from trl import GRPOTrainer, GRPOConfig
-from datasets import DatasetDict
+# from datasets import DatasetDict
 
 from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_training
 
 import os
 from dotenv import load_dotenv
-from utils import CustomRewardFunction, LabelPreservingCollator, CustomRewardFunctionPPOTrainer
-from ppo_trainer_custom import CustomPPOTrainer
+from utils import CustomRewardFunction
+# from ppo_trainer_custom import CustomPPOTrainer
 import pandas as pd
 from accelerate import Accelerator
 from accelerate.utils import DeepSpeedPlugin
 
-from types import MethodType
-import json
+# from types import MethodType
+# import json
 # import sys
 # import wandb
 
@@ -71,16 +71,15 @@ RL_TRAINING_FILES = os.getenv("RL_TRAINING_FILES") + "_" + ALGORITHM
 
 
 # Load DeepSpeed config
-if ALGORITHM == "PPO":
-    ds_plugin = DeepSpeedPlugin(
-        hf_ds_config="deepspeed_config.json"
-    )
-    accelerator = Accelerator(
-        mixed_precision="fp16", 
-        deepspeed_plugin=ds_plugin  # Optional if you loaded config from file
-    )
-else: 
-    accelerator = Accelerator()
+
+ds_plugin = DeepSpeedPlugin(
+    hf_ds_config="deepspeed_config.json"
+)
+accelerator = Accelerator(
+    mixed_precision="fp16", 
+    deepspeed_plugin=ds_plugin  # Optional if you loaded config from file
+)
+
 
 
 #### Load prompt train dataset ####
@@ -93,7 +92,7 @@ dataset_eval = Dataset.from_pandas(prompt_df_eval)
 
 
 base_model = AutoModelForCausalLM.from_pretrained(MODEL,  
-                                             device_map={"": accelerator.process_index},  # For GPU/TPU acceleration
+                                             device_map="auto",  # For GPU/TPU acceleration
                                              torch_dtype=torch.bfloat16,
                                             #  load_in_4bit=True,
                                              quantization_config={
@@ -105,8 +104,9 @@ base_model = AutoModelForCausalLM.from_pretrained(MODEL,
                                             )   # Optimize precision)
 
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL, truncation=False, padding=False)
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
 tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
 
 qlora_config = LoraConfig(
     r=64,
@@ -152,19 +152,6 @@ reward_function = CustomRewardFunction(extraction_model,
                                        detection_difference=DETECTION_DIFFERENCE)
 
 
-###### LoRA setup #####
-
-#TODO: is this truly needed --> already QLora on policy model --> too much overhead 
-
-lora_config = LoraConfig(
-    r=8,
-    lora_alpha=16,
-    lora_dropout=0.1,
-    bias="none",
-    task_type='CAUSAL_LM',  
-)
-
-
 ########## GRPO setup #############
 
 if ALGORITHM == "GRPO":
@@ -180,7 +167,7 @@ if ALGORITHM == "GRPO":
         # warmup_steps=5, # TODO:check if this makes any sense at all
         logging_dir="logs",
         # save_steps=1,
-        # save_total_limit=2,
+        save_total_limit=2,
         eval_strategy="epoch",
         save_strategy="epoch",
         # eval_steps=1,
