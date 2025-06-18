@@ -684,6 +684,18 @@ class LabelPreservingCollator(DataCollatorWithPadding):
 ##############################################################
 
 
+
+def tokenize_and_keep_original(example, tokenizer):
+    # Tokenize the prompt column
+    tokenized = tokenizer(example["prompt"], truncation=False, padding=False, max_length=2000)
+    # Keep the original text
+    # tokenized["original_text"] = example["prompt"]
+    return tokenized
+
+# Create label column for this to be handled properly in PPO Trainer
+def create_label(example):
+    return {"additional_entries": (example["prompt"], example["precondition_texts"], example["precondition_positions"])}
+
 # #######################
 
 # # Value head model for PPO
