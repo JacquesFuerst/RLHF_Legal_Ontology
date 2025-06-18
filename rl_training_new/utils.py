@@ -19,6 +19,11 @@ import ast
 load_dotenv()
 
 
+# if labels are not integers, convert them to integers
+def convert_label_to_int(data):
+    data["label"] = int(data["label"])
+    return data
+
 def parse_ratings(rating):
     rating_dict = {
         "Volledig fout": os.getenv("EXTRACTION_FEEDBACK_0"),

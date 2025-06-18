@@ -9,10 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 from chains.simple_chain import get_rag_response
-from embeddings.data_extraction import extract_text
-from embeddings.vector_store import store_embeddings
 from models.huggingface.generator import Generator
-from models.huggingface.embedding_model import EmbeddingModel
 
 from dotenv import load_dotenv
 
