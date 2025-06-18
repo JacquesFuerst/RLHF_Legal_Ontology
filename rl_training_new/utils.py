@@ -269,6 +269,7 @@ class CustomRewardTrainer(Trainer):
         logits = outputs.logits.squeeze()  # Shape: (batch_size) --> logits are the predicted rewards in this case
         
         # Custom loss calculation
+        #TODO: take cross entropy loss here
         loss = self._compute_custom_loss(logits, labels, weights)
         
         return (loss, outputs) if return_outputs else loss
