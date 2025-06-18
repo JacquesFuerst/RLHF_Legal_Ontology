@@ -16,6 +16,7 @@ from utils import CustomRewardFunction
 import pandas as pd
 from accelerate import Accelerator
 from accelerate.utils import DeepSpeedPlugin
+import json
 
 # from types import MethodType
 # import json
@@ -72,11 +73,14 @@ RL_TRAINING_FILES = os.getenv("RL_TRAINING_FILES") + "_" + ALGORITHM
 
 # Load DeepSpeed config
 
+with open("/home/jacques.furst/development/RAG/flintfiller-precondition-rl/rl_training_new/deepspeed_config.json", "r") as f:
+    ds_config = json.load(f)
+
 ds_plugin = DeepSpeedPlugin(
-    hf_ds_config="deepspeed_config.json"
+    hf_ds_config=ds_config
 )
 accelerator = Accelerator(
-    mixed_precision="fp16", 
+    mixed_precision="bf16", 
     deepspeed_plugin=ds_plugin  # Optional if you loaded config from file
 )
 
@@ -92,10 +96,11 @@ dataset_eval = Dataset.from_pandas(prompt_df_eval)
 
 
 base_model = AutoModelForCausalLM.from_pretrained(MODEL,  
-                                             device_map="auto",  # For GPU/TPU acceleration
-                                             torch_dtype=torch.bfloat16,
+                                            #  device_map="auto",  # For GPU/TPU acceleration
+                                            device_map=None,
+                                            torch_dtype=torch.bfloat16,
                                             #  load_in_4bit=True,
-                                             quantization_config={
+                                            quantization_config={
                                                 "load_in_4bit": True,
                                                 "bnb_4bit_compute_dtype": torch.bfloat16,
                                                 "bnb_4bit_use_double_quant": True,

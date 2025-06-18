@@ -16,3 +16,4 @@ __pycache__/
 reward_training_files/*
 rl_training_files/*
 rl_training_new/wandb/*
+wandb/*
