@@ -60,7 +60,7 @@ ALGORITHM = os.getenv("RL_ALGORITHM")
 REWARD_MODEL = os.getenv("REWARD_MODEL_NAME")
 REWARD_MODEL_EXTRACTION_LORA = os.getenv("REWARD_MODEL_EXTRACTION_LORA")
 REWARD_MODEL_DETECTION_LORA = os.getenv("REWARD_MODEL_DETECTION_LORA")
-RL_TOKENIZATION = "best_window"
+RL_TOKENIZATION = os.getenv("RL_TOKENIZATION")
 MAX_LENGTH = int(os.getenv("RL_MAX_LENGTH"))
 STRIDE = int(os.getenv("RL_STRIDE"))
 PROMPT_DATASET_TRAIN = os.getenv("PROMPT_DATASET_TRAIN")
@@ -68,6 +68,7 @@ PROMPT_DATASET_EVAL = os.getenv("PROMPT_DATASET_EVAL")
 DETECTION_DIFFERENCE = int(os.getenv("DETECTION_DIFFERENCE"))
 WEIGHT_EXTRACTION = float(os.getenv("WEIGHT_EXTRACTION"))
 WEIGHT_DETECTION = float(os.getenv("WEIGHT_DETECTION"))
+WEIGHT_LENGTH_PENALTY = float(os.getenv("WEIGHT_LENGTH_PENALTY"))
 RL_TRAINING_FILES = os.getenv("RL_TRAINING_FILES") + "_" + ALGORITHM
 
 
@@ -135,14 +136,83 @@ policy_model = get_peft_model(base_model, qlora_config)
 ######## Model Lodading ##########
 
 # Load reward model feedback extraction
-reward_model = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
+reward_model_extraction = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
+reward_model_detection = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL)
 
-extraction_model = PeftModel.from_pretrained(reward_model, REWARD_MODEL_EXTRACTION_LORA).to(device)
+extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MODEL_EXTRACTION_LORA).to(device)
 # extraction_model = extraction_model.merge_and_unload()
 
-detection_model = PeftModel.from_pretrained(reward_model, REWARD_MODEL_DETECTION_LORA).to(device)
+detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL_DETECTION_LORA).to(device)
 # detection_model = detection_model.merge_and_unload()
+
+response_text = """
+                        Inhoud: <inhoud>
+                        <details>
+                        <summary>parsering</summary>
+                        <pre>
+                        <code>
+                subfact
+                        </code>
+                        </pre>
+                        </details>
+        
+                        Resultaat:
+
+
+                        Subfact: vreemdeling 
+        
+                        Positie: Artikel 8 IN Verordening vreemdelingenattributen
+        
+                        Inhoud: de vreemdeling heeft in Nederland uitsluitend rechtmatig verblijf:
+                        <details>
+                        <summary>parsering</summary>
+                        <pre>
+                        <code>
+                de vreemdeling
+                        </code>
+                        </pre>
+                        </details>
+        
+                        Subfact: vreemdeling 
+        
+                        Positie: Artikel 8 IN Verordening vreemdelingenattributen
+        
+                        Inhoud: het verblijf van een vreemdeling in Nederland op grond van deze wet anders dan op de 
+                        gronden bedoeld in de artikelen 29 en 34
+                        <details>
+                        <summary>parsering</summary>
+                        <pre>
+                        <code>
+                het verblijf van een vreemdeling
+                        </code>
+                        </pre>
+                        </details>
+        
+                        Subfact: vreemdeling 
+        
+                        Positie: Artikel 8, onder a IN Verordening vreemdelingenattributen
+        
+                        Inhoud: op grond van een verblijfsvergunning voor bepaalde tijd als bedoeld in artikel 14;
+                        <details>
+                        <summary>parsering</summary>
+                        <pre>
+                        <code>
+                op grond van een verblijfsvergunning voor bepaalde tijd
+                        </code>
+                        </pre>
+                        </details>
+                        """
+
+precon_text = "NOT ieder die op grond van een wettelijke bepaling als Nederlander moet worden behandeld"
+
+with torch.no_grad():
+    inputs = reward_tokenizer(precon_text + " " + response_text, return_tensors='pt', truncation=True, padding="max_length").to(device)
+    outputs = extraction_model(**inputs)
+    prediction = outputs.logits.item()
+    print(f"Sample {1}: Predicted Rating: {prediction}")
+
+        #################
 
 
 # Create the custom reward function
@@ -153,7 +223,8 @@ reward_function = CustomRewardFunction(extraction_model,
                                        RL_TOKENIZATION, 
                                        device, 
                                        weight_extraction=WEIGHT_EXTRACTION, 
-                                       weight_detection=WEIGHT_DETECTION, 
+                                       weight_detection=WEIGHT_DETECTION,
+                                       weight_length_penalty=WEIGHT_LENGTH_PENALTY, 
                                        detection_difference=DETECTION_DIFFERENCE)
 
 
@@ -169,7 +240,7 @@ if ALGORITHM == "GRPO":
         # learning_rate=1e-5,
         num_train_epochs=10,
         # weight_decay=0.01,
-        # warmup_steps=5, # TODO:check if this makes any sense at all
+        # warmup_steps=17, # TODO:check if this makes any sense at all
         logging_dir="logs",
         # save_steps=1,
         save_total_limit=2,
@@ -181,7 +252,7 @@ if ALGORITHM == "GRPO":
         metric_for_best_model="eval_loss",
         gradient_accumulation_steps=4, #TODO: think about whether this is truly necessary
         report_to="wandb",
-        max_completion_length=1024,
+        max_completion_length=2048,
         max_prompt_length=3000,
         optim="adamw_8bit",
         bf16=True

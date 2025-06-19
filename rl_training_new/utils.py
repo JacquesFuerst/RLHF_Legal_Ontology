@@ -14,6 +14,7 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM
 
 import ast
+import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -155,14 +156,14 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
 
     #Only return pytorch tensors if doing RL training loop
     if rl_training:
-        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length")
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
     else:
-        tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
+        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
 
     return tokenized
 
 
-def tokenize_fn_basic_batched(examples, feedback_train, tokenizer):
+def tokenize_fn_basic_batched(examples, feedback_train, tokenizer, rl_training=False):
     """
     Basic tokenization with standard cutoff after 512 tokens. Made to be applied to dataset batches.
     """
@@ -172,10 +173,15 @@ def tokenize_fn_basic_batched(examples, feedback_train, tokenizer):
     elif feedback_train == "feedback_detection":
         combined_texts = [f"{c} {p} {r}" for c, p, r in zip(examples["precondition_text"], examples["precondition_position"], examples["response_text"])]
     
-    return tokenizer(combined_texts, truncation=True, padding="max_length")
+    if rl_training:
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
+    else:
+        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
+
+    return tokenized
 
 
-def tokenize_fn_basic(examples, feedback_train, tokenizer):
+def tokenize_fn_basic(examples, feedback_train, tokenizer, rl_training=False):
     """
     Basic tokenization with standard cutoff after 512 tokens.
     """
@@ -189,8 +195,13 @@ def tokenize_fn_basic(examples, feedback_train, tokenizer):
 
     elif feedback_train == "feedback_detection":
         combined_texts = f"{precon_text} {precon_pos} {response}"
+
+    if rl_training:
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
+    else:
+        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
     
-    return tokenizer(combined_texts, truncation=True, padding="max_length")
+    return tokenized
 
 
 
@@ -442,7 +453,7 @@ Other useful training things, look at later if needed.
 #################### Reward function RL training #################################
 
 class CustomRewardFunction:
-    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, detection_difference=5):
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, weight_length_penalty=0.01, detection_difference=5):
         """
         Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
         Args:
@@ -454,6 +465,7 @@ class CustomRewardFunction:
         """
         self.weight_extraction = weight_extraction
         self.weight_detection = weight_detection
+        self.weight_length_penalty = weight_length_penalty
         self.reward_model_extraction = reward_model_extraction
         self.reward_model_detection = reward_model_detection
         self.reward_tokenizer = reward_tokenizer
@@ -462,6 +474,7 @@ class CustomRewardFunction:
         self.device = device
         self.rl_tokenization = rl_tokenization
         self.detection_difference = detection_difference
+        
 
         self.__name__ = "precondition_reward_function"
 
@@ -490,6 +503,7 @@ class CustomRewardFunction:
                 # print(prompt_reward)
                 total_reward_detection = 0
                 total_reward_extraction = 0
+                all_precons_and_positions_text = ""
 
                 # print(f"precondition texts keys: {precondition_positions_dict.keys()}")
 
@@ -503,36 +517,87 @@ class CustomRewardFunction:
                     inputs["precondition_position"] = precondition_positions_dict[condition_id]
                     inputs["response_text"] = response
 
+                    # print(f"Prompt: {prompt}")
+                    # print(f"Response: {response}")
+
+                    #gather toatl precondition text and position length
+                    all_precons_and_positions_text += inputs["precondition_text"] + inputs["precondition_position"]
+
 
                     if self.rl_tokenization == "basic":
-                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer).to(self.device)
-                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer).to(self.device)
+                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer, rl_training=True).to(self.device)
+                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer, rl_training=True).to(self.device)
                     elif self.rl_tokenization == "best_window":
                         inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
                         inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
 
-                    # pass tensors into reward models
+                    # # pass tensors into reward models
+                    # inputs_extraction["input_ids"] = torch.tensor(inputs_extraction["input_ids"]).to(self.device)
+                    # inputs_extraction["attention_mask"] = torch.tensor(inputs_extraction["attention_mask"]).to(self.device)
+
+
+                    # Cause we are only handling one input at a time, unsqueezing inputs
+                    #TODO: double-check wehther this is better with best window as well...
+
+                    
+                    # print(type(inputs_extraction), inputs_extraction.keys())
+
+                    # if inputs_extraction.dim() == 1:
+                    #     inputs_extraction = inputs_extraction.unsqueeze(0)
+                    #     inputs_detection = inputs_detection.unsqueeze(0)
+
+                    
+
                     outputs_extraction = self.reward_model_extraction(**inputs_extraction)
                     outputs_detection = self.reward_model_detection(**inputs_detection)
                     
                     # add up rewads for all preconditions
-                    total_reward_extraction += outputs_extraction.logits.item()
-                    total_reward_detection += (outputs_detection.logits.item() - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
+                    reward_extraction = outputs_extraction.logits.item()
+                    reward_detection = outputs_detection.logits.item()
+                    total_reward_extraction += reward_extraction
+                    total_reward_detection += (reward_detection - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
+
+                    precon = inputs["precondition_text"]
+                    print(f"Precondition: {precon}")
+                    print(f"Reward Extrction: {reward_extraction}")
+                    print(f"Reward detection: {reward_detection}")
+                    print(f"Response: {response}")
+                    response_words = len(response.split())
+                    print(f"Length response: {response_words}")
                 
+
+                # clean up rpompt and count words and sentence marks, to give length penalty
+                cleaned_prompt = re.findall(r"\b[\w'-]+[.!?]?\b", prompt)
+
+                prompt_word_count = len(cleaned_prompt.split())
+                essential_words = len(all_precons_and_positions_text.split())
+                length_penalty = prompt_word_count - essential_words + 5 * len(precondition_texts_dict)
+
+                
+
                 # add total prompt reward to list of prompt rewards
-                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  # Divide by 100 to maybe have more stable training
+                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - (self.weight_length_penalty * length_penalty)
+                # Somehow penalize if there are too many preconditions here... 
+
+                print(f"Number of preconditions: {len(precondition_texts_dict)}")
+                print(f"Extraction reward pre prompt: {total_reward_extraction}")
+                print(f"Detection reward per prompt: {total_reward_detection}")
+                print(f"Length penalty: {length_penalty}")
                 prompt_rewards.append(prompt_reward)
 
             
-            # subtract mean and divide by standard deviation for the rewards
-            mean = np.mean(prompt_rewards)
-            std = np.std(prompt_rewards)   
+            # # subtract mean and divide by standard deviation for the rewards
+            # mean = np.mean(prompt_rewards)
+            # std = np.std(prompt_rewards)   
 
-            normalized_prompt_rewards = [(r - mean) / std for r in prompt_rewards]
+            # normalized_prompt_rewards = [(r - mean) / std for r in prompt_rewards]
+            # print(prompt_rewards)
+            
+            #TODO: need to divide the reward for both by the number of perconditions to get the average reward per precondition, such that the model learns something...
 
             # print(f"prompt rewards: {prompt_rewards}")
 
-            return torch.tensor(normalized_prompt_rewards)
+            return torch.tensor(prompt_rewards)
         
 
 
@@ -626,8 +691,8 @@ class CustomRewardFunctionPPOTrainer:
 
 
                     if self.rl_tokenization == "basic":
-                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer).to(self.device)
-                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer).to(self.device)
+                        inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer, rl_training=True).to(self.device)
+                        inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer, rl_training=True).to(self.device)
                     elif self.rl_tokenization == "best_window":
                         inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
                         inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
