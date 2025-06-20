@@ -146,73 +146,73 @@ extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MOD
 detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL_DETECTION_LORA).to(device)
 # detection_model = detection_model.merge_and_unload()
 
-response_text = """
-                        Inhoud: <inhoud>
-                        <details>
-                        <summary>parsering</summary>
-                        <pre>
-                        <code>
-                subfact
-                        </code>
-                        </pre>
-                        </details>
+# response_text = """
+#                         Inhoud: <inhoud>
+#                         <details>
+#                         <summary>parsering</summary>
+#                         <pre>
+#                         <code>
+#                 subfact
+#                         </code>
+#                         </pre>
+#                         </details>
         
-                        Resultaat:
+#                         Resultaat:
 
 
-                        Subfact: vreemdeling 
+#                         Subfact: vreemdeling dfsf
         
-                        Positie: Artikel 8 IN Verordening vreemdelingenattributen
+#                         Positie: Artikel 8 IN Verordening vreemdelingenattributen
         
-                        Inhoud: de vreemdeling heeft in Nederland uitsluitend rechtmatig verblijf:
-                        <details>
-                        <summary>parsering</summary>
-                        <pre>
-                        <code>
-                de vreemdeling
-                        </code>
-                        </pre>
-                        </details>
+#                         Inhoud: de vreemdeling heeft in Nederland uitsluitend rechtmatig verblijf:
+#                         <details>
+#                         <summary>parsering</summary>
+#                         <pre>
+#                         <code>
+#                 de vreemdeling
+#                         </code>
+#                         </pre>
+#                         </details>
         
-                        Subfact: vreemdeling 
+#                         Subfact: vreemdeling 
         
-                        Positie: Artikel 8 IN Verordening vreemdelingenattributen
+#                         Positie: Artikel 8 IN Verordening vreemdelingenattributen
         
-                        Inhoud: het verblijf van een vreemdeling in Nederland op grond van deze wet anders dan op de 
-                        gronden bedoeld in de artikelen 29 en 34
-                        <details>
-                        <summary>parsering</summary>
-                        <pre>
-                        <code>
-                het verblijf van een vreemdeling
-                        </code>
-                        </pre>
-                        </details>
+#                         Inhoud: het verblijf van een vreemdeling in Nederland op grond van deze wet anders dan op de 
+#                         gronden bedoeld in de artikelen 29 en 34
+#                         <details>
+#                         <summary>parsering</summary>
+#                         <pre>
+#                         <code>
+#                 het verblijf van een vreemdeling
+#                         </code>
+#                         </pre>
+#                         </details>
         
-                        Subfact: vreemdeling 
+#                         Subfact: vreemdeling 
         
-                        Positie: Artikel 8, onder a IN Verordening vreemdelingenattributen
+#                         Positie: Artikel 8, onder a IN Verordening vreemdelingenattributen
         
-                        Inhoud: op grond van een verblijfsvergunning voor bepaalde tijd als bedoeld in artikel 14;
-                        <details>
-                        <summary>parsering</summary>
-                        <pre>
-                        <code>
-                op grond van een verblijfsvergunning voor bepaalde tijd
-                        </code>
-                        </pre>
-                        </details>
-                        """
+#                         Inhoud: op grond van een verblijfsvergunning voor bepaalde tijd als bedoeld in artikel 14;
+#                         <details>
+#                         <summary>parsering</summary>
+#                         <pre>
+#                         <code>
+#                 op grond van een verblijfsvergunning voor bepaalde tijd
+#                         </code>
+#                         </pre>
+#                         </details>
+#                         """
 
-precon_text = "NOT ieder die op grond van een wettelijke bepaling als Nederlander moet worden behandeld"
+# precon_text = "NOT ieder die op grond van een wettelijke bepaling als Nederlander moet worden behandeld"
 
-with torch.no_grad():
-    inputs = reward_tokenizer(precon_text + " " + response_text, return_tensors='pt', truncation=True, padding="max_length").to(device)
-    outputs = extraction_model(**inputs)
-    prediction = outputs.logits.item()
-    print(f"Sample {1}: Predicted Rating: {prediction}")
+# with torch.no_grad():
+#     inputs = reward_tokenizer(precon_text + " " + response_text, return_tensors='pt', truncation=True, padding="max_length").to(device)
+#     outputs = extraction_model(**inputs)
+#     prediction = outputs.logits.item()
+#     print(f"Sample {1}: Predicted Rating: {prediction}")
 
-        #################
+#         #################
 
 
 # Create the custom reward function
@@ -235,9 +235,10 @@ if ALGORITHM == "GRPO":
     training_args = GRPOConfig(
         output_dir=RL_TRAINING_FILES, 
         per_device_train_batch_size=1,
+        per_device_eval_batch_size=6,
         logging_steps=1, 
         gradient_checkpointing=True,
-        # learning_rate=1e-5,
+        learning_rate=3e-4,
         num_train_epochs=10,
         # weight_decay=0.01,
         # warmup_steps=17, # TODO:check if this makes any sense at all
@@ -250,12 +251,14 @@ if ALGORITHM == "GRPO":
         # batch_size=2,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
-        gradient_accumulation_steps=4, #TODO: think about whether this is truly necessary
+        gradient_accumulation_steps=3, #TODO: think about whether this is truly necessary
         report_to="wandb",
         max_completion_length=2048,
         max_prompt_length=3000,
         optim="adamw_8bit",
-        bf16=True
+        bf16=True,
+        ddp_find_unused_parameters=False,
+        num_generations=9, # Number of generations per prompt
         )
 
     # Initialize GRPO trainer

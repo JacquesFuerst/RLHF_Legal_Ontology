@@ -156,9 +156,9 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
 
     #Only return pytorch tensors if doing RL training loop
     if rl_training:
-        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length", max_length=max_length)
     else:
-        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, truncation=True, padding="max_length", max_length=max_length)
 
     return tokenized
 
@@ -174,9 +174,9 @@ def tokenize_fn_basic_batched(examples, feedback_train, tokenizer, rl_training=F
         combined_texts = [f"{c} {p} {r}" for c, p, r in zip(examples["precondition_text"], examples["precondition_position"], examples["response_text"])]
     
     if rl_training:
-        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length")
     else:
-        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
 
     return tokenized
 
@@ -197,9 +197,9 @@ def tokenize_fn_basic(examples, feedback_train, tokenizer, rl_training=False):
         combined_texts = f"{precon_text} {precon_pos} {response}"
 
     if rl_training:
-        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length")
     else:
-        tokenized = tokenizer(combined_texts, truncation=True, padding=True)
+        tokenized = tokenizer(combined_texts, truncation=True, padding="max_length")
     
     return tokenized
 
@@ -489,7 +489,7 @@ class CustomRewardFunction:
 
         # print(precondition_texts_list)
 
-        prompt_rewards = []
+        response_rewards = []
 
         with torch.no_grad():
             total_reward_extraction = 0
@@ -499,8 +499,8 @@ class CustomRewardFunction:
 
                 precondition_texts_dict = ast.literal_eval(precondition_texts)
                 precondition_positions_dict = ast.literal_eval(precondition_positions)
-                prompt_reward = 0
-                # print(prompt_reward)
+                num_preconditions = len(precondition_texts_dict)
+                response_reward = 0
                 total_reward_detection = 0
                 total_reward_extraction = 0
                 all_precons_and_positions_text = ""
@@ -548,6 +548,8 @@ class CustomRewardFunction:
 
                     
 
+                    
+
                     outputs_extraction = self.reward_model_extraction(**inputs_extraction)
                     outputs_detection = self.reward_model_detection(**inputs_detection)
                     
@@ -557,33 +559,42 @@ class CustomRewardFunction:
                     total_reward_extraction += reward_extraction
                     total_reward_detection += (reward_detection - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
 
-                    precon = inputs["precondition_text"]
-                    print(f"Precondition: {precon}")
-                    print(f"Reward Extrction: {reward_extraction}")
-                    print(f"Reward detection: {reward_detection}")
-                    print(f"Response: {response}")
+                    # precon = inputs["precondition_text"]
+                    # print(f"Precondition: {precon}")
+                    # print(f"Reward Extrction: {reward_extraction}")
+                    # print(f"Reward detection: {reward_detection}")
+                    # print(f"Response: {response}")
                     response_words = len(response.split())
-                    print(f"Length response: {response_words}")
+                    # print(f"Length response: {response_words}")
+
                 
 
-                # clean up rpompt and count words and sentence marks, to give length penalty
-                cleaned_prompt = re.findall(r"\b[\w'-]+[.!?]?\b", prompt)
 
-                prompt_word_count = len(cleaned_prompt.split())
+                
+
+                # # clean up rpompt and count words and sentence marks, to give length penalty
+                # cleaned_prompt = re.findall(r"\b[\w'-]+[.!?]?\b", prompt)
+
+                # splitting prompt to get number of words
+                # prompt_word_count = len(prompt.split())
                 essential_words = len(all_precons_and_positions_text.split())
-                length_penalty = prompt_word_count - essential_words + 5 * len(precondition_texts_dict)
+                # print(f"Essential words: {essential_words}")
+                length_penalty = response_words - essential_words + 10 * len(precondition_texts_dict)
+                # print(f"length penalty: ")
 
-                
+                # print(f"Number preconditions: {num_preconditions}")
+                # print(f"Preconditions: {precondition_texts_dict}")
 
                 # add total prompt reward to list of prompt rewards
-                prompt_reward = self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - (self.weight_length_penalty * length_penalty)
+                response_reward = (self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - self.weight_length_penalty * length_penalty) / num_preconditions
                 # Somehow penalize if there are too many preconditions here... 
 
-                print(f"Number of preconditions: {len(precondition_texts_dict)}")
-                print(f"Extraction reward pre prompt: {total_reward_extraction}")
-                print(f"Detection reward per prompt: {total_reward_detection}")
-                print(f"Length penalty: {length_penalty}")
-                prompt_rewards.append(prompt_reward)
+                # print(f"Number of preconditions: {len(precondition_texts_dict)}")
+                # print(f"Extraction reward pre prompt: {total_reward_extraction}")
+                # print(f"Detection reward per prompt: {total_reward_detection}")
+                # print(f"Length penalty: {length_penalty}")
+                # print(f"Response reward: {response_reward}")
+                response_rewards.append(response_reward)
 
             
             # # subtract mean and divide by standard deviation for the rewards
@@ -595,9 +606,9 @@ class CustomRewardFunction:
             
             #TODO: need to divide the reward for both by the number of perconditions to get the average reward per precondition, such that the model learns something...
 
-            # print(f"prompt rewards: {prompt_rewards}")
+            # print(f"response rewards: {response_rewards}")
 
-            return torch.tensor(prompt_rewards)
+            return torch.tensor(response_rewards)
         
 
 
