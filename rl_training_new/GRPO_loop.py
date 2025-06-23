@@ -131,6 +131,9 @@ base_model = prepare_model_for_kbit_training(base_model)
 # Apply QLoRA
 policy_model = get_peft_model(base_model, qlora_config)
 
+policy_model.print_trainable_parameters()
+
+
 
 
 ######## Model Lodading ##########
@@ -238,7 +241,7 @@ if ALGORITHM == "GRPO":
         per_device_eval_batch_size=6,
         logging_steps=1, 
         gradient_checkpointing=True,
-        learning_rate=3e-4,
+        learning_rate=5e-5,
         num_train_epochs=10,
         # weight_decay=0.01,
         # warmup_steps=17, # TODO:check if this makes any sense at all
