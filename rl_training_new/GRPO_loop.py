@@ -11,7 +11,7 @@ from peft import LoraConfig, get_peft_model, PeftModel, prepare_model_for_kbit_t
 
 import os
 from dotenv import load_dotenv
-from utils import CustomRewardFunction
+from utils import CustomRewardFunction, CustomMetricLogger
 # from ppo_trainer_custom import CustomPPOTrainer
 import pandas as pd
 from accelerate import Accelerator
@@ -149,74 +149,9 @@ extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MOD
 detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL_DETECTION_LORA).to(device)
 # detection_model = detection_model.merge_and_unload()
 
-# response_text = """
-#                         Inhoud: <inhoud>
-#                         <details>
-#                         <summary>parsering</summary>
-#                         <pre>
-#                         <code>
-#                 subfact
-#                         </code>
-#                         </pre>
-#                         </details>
-        
-#                         Resultaat:
 
-
-#                         Subfact: vreemdeling dfsf
-        
-#                         Positie: Artikel 8 IN Verordening vreemdelingenattributen
-        
-#                         Inhoud: de vreemdeling heeft in Nederland uitsluitend rechtmatig verblijf:
-#                         <details>
-#                         <summary>parsering</summary>
-#                         <pre>
-#                         <code>
-#                 de vreemdeling
-#                         </code>
-#                         </pre>
-#                         </details>
-        
-#                         Subfact: vreemdeling 
-        
-#                         Positie: Artikel 8 IN Verordening vreemdelingenattributen
-        
-#                         Inhoud: het verblijf van een vreemdeling in Nederland op grond van deze wet anders dan op de 
-#                         gronden bedoeld in de artikelen 29 en 34
-#                         <details>
-#                         <summary>parsering</summary>
-#                         <pre>
-#                         <code>
-#                 het verblijf van een vreemdeling
-#                         </code>
-#                         </pre>
-#                         </details>
-        
-#                         Subfact: vreemdeling 
-        
-#                         Positie: Artikel 8, onder a IN Verordening vreemdelingenattributen
-        
-#                         Inhoud: op grond van een verblijfsvergunning voor bepaalde tijd als bedoeld in artikel 14;
-#                         <details>
-#                         <summary>parsering</summary>
-#                         <pre>
-#                         <code>
-#                 op grond van een verblijfsvergunning voor bepaalde tijd
-#                         </code>
-#                         </pre>
-#                         </details>
-#                         """
-
-# precon_text = "NOT ieder die op grond van een wettelijke bepaling als Nederlander moet worden behandeld"
-
-# with torch.no_grad():
-#     inputs = reward_tokenizer(precon_text + " " + response_text, return_tensors='pt', truncation=True, padding="max_length").to(device)
-#     outputs = extraction_model(**inputs)
-#     prediction = outputs.logits.item()
-#     print(f"Sample {1}: Predicted Rating: {prediction}")
-
-#         #################
-
+# custom logger for custom metrics
+custom_logger = CustomMetricLogger()
 
 # Create the custom reward function
 reward_function = CustomRewardFunction(extraction_model, 
@@ -228,7 +163,10 @@ reward_function = CustomRewardFunction(extraction_model,
                                        weight_extraction=WEIGHT_EXTRACTION, 
                                        weight_detection=WEIGHT_DETECTION,
                                        weight_length_penalty=WEIGHT_LENGTH_PENALTY, 
-                                       detection_difference=DETECTION_DIFFERENCE)
+                                       detection_difference=DETECTION_DIFFERENCE,
+                                       custom_logger=custom_logger
+                                       )
+
 
 
 ########## GRPO setup #############
@@ -271,6 +209,7 @@ if ALGORITHM == "GRPO":
         train_dataset=dataset_train,
         eval_dataset=dataset_eval,
         args=training_args,
+        callbacks=[custom_logger],
         # peft_config=lora_config
     )
 

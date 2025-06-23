@@ -1,0 +1,1 @@
+{"AZURE_OPENAI_API_KEY": "da0ddc85a4dc483a8bdda8e369ce30a1", "AZURE_MODEL_NAME": "gpt-4.1", "AZURE_OPENAI_ENDPOINT": "https://openai-ds-instance-sweden.openai.azure.com/", "OPENAI_API_VERSION": "2024-12-01-preview", "AZURE_DEPLOYMENT_NAME": "deze-voor-alles", "USE_AZURE_OPENAI": "YES", "USE_LOCAL_MODEL": "NO"}

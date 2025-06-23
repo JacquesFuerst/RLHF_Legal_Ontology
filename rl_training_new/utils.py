@@ -8,13 +8,10 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 from sentence_transformers import SentenceTransformer
 from torch.nn import functional as F
-from transformers import Trainer, DataCollatorWithPadding
-
-import torch.nn as nn
-from transformers import AutoModelForCausalLM
+from transformers import Trainer, DataCollatorWithPadding, TrainerCallback
 
 import ast
-import re
+import wandb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -453,7 +450,7 @@ Other useful training things, look at later if needed.
 #################### Reward function RL training #################################
 
 class CustomRewardFunction:
-    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, weight_length_penalty=0.01, detection_difference=5):
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, weight_length_penalty=0.01, detection_difference=5, custom_logger=None):
         """
         Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
         Args:
@@ -474,6 +471,7 @@ class CustomRewardFunction:
         self.device = device
         self.rl_tokenization = rl_tokenization
         self.detection_difference = detection_difference
+        self.custom_logger = custom_logger
         
 
         self.__name__ = "precondition_reward_function"
@@ -587,7 +585,9 @@ class CustomRewardFunction:
 
                 # add total prompt reward to list of prompt rewards
                 response_reward = (self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - self.weight_length_penalty * length_penalty) / num_preconditions
-                # Somehow penalize if there are too many preconditions here... 
+
+                # add length penalty to logged variabels
+                self.custom_logger.accumulate(length_penalty) 
 
                 # print(f"Number of preconditions: {len(precondition_texts_dict)}")
                 # print(f"Extraction reward pre prompt: {total_reward_extraction}")
@@ -609,6 +609,47 @@ class CustomRewardFunction:
             # print(f"response rewards: {response_rewards}")
 
             return torch.tensor(response_rewards)
+        
+
+
+
+
+
+
+
+
+
+class CustomMetricLogger(TrainerCallback):
+    # log the word error 
+    def __init__(self):
+        self.custom_length_penalty_sum = 0.0
+        self.custom_length_penalty_count = 0
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        # only called when trainer logs, so metric is logged together with other metrics
+        if self.custom_length_penalty_count > 0:
+            mean_custom_length_penalty = self.custom_length_penalty_sum / self.custom_length_penalty_count
+            wandb.log({"rewards/length_penalty/mean": mean_custom_length_penalty}, step=state.global_step)
+            self.custom_length_penalty_sum = 0.0
+            self.custom_length_penalty_count = 0
+
+    def accumulate(self, length_penalty):
+        self.custom_length_penalty_sum += length_penalty
+        self.custom_length_penalty_count += 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################### PPO Classes ###################################################################
         
 
 
