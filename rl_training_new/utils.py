@@ -485,6 +485,8 @@ class CustomRewardFunction:
         precondition_texts_list = kwargs["precondition_texts"]
         precondition_positions_list = kwargs["precondition_positions"]
 
+        
+
         # print(precondition_texts_list)
 
         response_rewards = []
@@ -515,13 +517,10 @@ class CustomRewardFunction:
                     inputs["precondition_position"] = precondition_positions_dict[condition_id]
                     inputs["response_text"] = response
 
-                    # print(f"Prompt: {prompt}")
-                    # print(f"Response: {response}")
-
                     #gather toatl precondition text and position length
                     all_precons_and_positions_text += inputs["precondition_text"] + inputs["precondition_position"]
 
-
+                    # tokenize response
                     if self.rl_tokenization == "basic":
                         inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer, rl_training=True).to(self.device)
                         inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer, rl_training=True).to(self.device)
@@ -529,25 +528,10 @@ class CustomRewardFunction:
                         inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
                         inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
 
-                    # # pass tensors into reward models
-                    # inputs_extraction["input_ids"] = torch.tensor(inputs_extraction["input_ids"]).to(self.device)
-                    # inputs_extraction["attention_mask"] = torch.tensor(inputs_extraction["attention_mask"]).to(self.device)
-
-
-                    # Cause we are only handling one input at a time, unsqueezing inputs
-                    #TODO: double-check wehther this is better with best window as well...
-
-                    
-                    # print(type(inputs_extraction), inputs_extraction.keys())
-
-                    # if inputs_extraction.dim() == 1:
-                    #     inputs_extraction = inputs_extraction.unsqueeze(0)
-                    #     inputs_detection = inputs_detection.unsqueeze(0)
-
                     
 
                     
-
+                    # get reward model valuation
                     outputs_extraction = self.reward_model_extraction(**inputs_extraction)
                     outputs_detection = self.reward_model_detection(**inputs_detection)
                     
@@ -557,31 +541,13 @@ class CustomRewardFunction:
                     total_reward_extraction += reward_extraction
                     total_reward_detection += (reward_detection - self.detection_difference) # subtracting detection_difference here to get to the proper detection difference
 
-                    # precon = inputs["precondition_text"]
-                    # print(f"Precondition: {precon}")
-                    # print(f"Reward Extrction: {reward_extraction}")
-                    # print(f"Reward detection: {reward_detection}")
-                    # print(f"Response: {response}")
+                    # get number fo response words for length penalty
                     response_words = len(response.split())
-                    # print(f"Length response: {response_words}")
 
-                
-
-
-                
-
-                # # clean up rpompt and count words and sentence marks, to give length penalty
-                # cleaned_prompt = re.findall(r"\b[\w'-]+[.!?]?\b", prompt)
 
                 # splitting prompt to get number of words
-                # prompt_word_count = len(prompt.split())
                 essential_words = len(all_precons_and_positions_text.split())
-                # print(f"Essential words: {essential_words}")
                 length_penalty = response_words - essential_words + 10 * len(precondition_texts_dict)
-                # print(f"length penalty: ")
-
-                # print(f"Number preconditions: {num_preconditions}")
-                # print(f"Preconditions: {precondition_texts_dict}")
 
                 # add total prompt reward to list of prompt rewards
                 response_reward = (self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - self.weight_length_penalty * length_penalty) / num_preconditions
@@ -589,24 +555,8 @@ class CustomRewardFunction:
                 # add length penalty to logged variabels
                 self.custom_logger.accumulate(length_penalty) 
 
-                # print(f"Number of preconditions: {len(precondition_texts_dict)}")
-                # print(f"Extraction reward pre prompt: {total_reward_extraction}")
-                # print(f"Detection reward per prompt: {total_reward_detection}")
-                # print(f"Length penalty: {length_penalty}")
-                # print(f"Response reward: {response_reward}")
+                #add reward to reward list
                 response_rewards.append(response_reward)
-
-            
-            # # subtract mean and divide by standard deviation for the rewards
-            # mean = np.mean(prompt_rewards)
-            # std = np.std(prompt_rewards)   
-
-            # normalized_prompt_rewards = [(r - mean) / std for r in prompt_rewards]
-            # print(prompt_rewards)
-            
-            #TODO: need to divide the reward for both by the number of perconditions to get the average reward per precondition, such that the model learns something...
-
-            # print(f"response rewards: {response_rewards}")
 
             return torch.tensor(response_rewards)
         
@@ -614,24 +564,31 @@ class CustomRewardFunction:
 
 
 
-
-
-
-
-
 class CustomMetricLogger(TrainerCallback):
-    # log the word error 
+
     def __init__(self):
         self.custom_length_penalty_sum = 0.0
         self.custom_length_penalty_count = 0
+        self.last_logged_step = -1
 
     def on_log(self, args, state, control, logs=None, **kwargs):
-        # only called when trainer logs, so metric is logged together with other metrics
+        # Only log if this is a new step (prevents duplicate logs)
+        if state.global_step == self.last_logged_step:
+            return
+
         if self.custom_length_penalty_count > 0:
             mean_custom_length_penalty = self.custom_length_penalty_sum / self.custom_length_penalty_count
-            wandb.log({"rewards/length_penalty/mean": mean_custom_length_penalty}, step=state.global_step)
+
+            if wandb.run is not None:
+                wandb.log({"train/length_penalty/mean": mean_custom_length_penalty})
+                run_id = wandb.run.id
+
+                with open(f"/home/jacques.furst/development/RAG/flintfiller-precondition-rl/custom_metrics/custom_metrics_{run_id}.log", "a") as f:
+                    f.write(f"{state.global_step}, length penalty: {mean_custom_length_penalty}\n")
+
             self.custom_length_penalty_sum = 0.0
             self.custom_length_penalty_count = 0
+            self.last_logged_step = state.global_step
 
     def accumulate(self, length_penalty):
         self.custom_length_penalty_sum += length_penalty

@@ -17,3 +17,4 @@ reward_training_files/*
 rl_training_files/*
 rl_training_new/wandb/*
 wandb/*
+custom_metrics/*

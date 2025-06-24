@@ -18,6 +18,8 @@ from accelerate import Accelerator
 from accelerate.utils import DeepSpeedPlugin
 import json
 
+import wandb
+
 # from types import MethodType
 # import json
 # import sys
@@ -150,6 +152,9 @@ detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL
 # detection_model = detection_model.merge_and_unload()
 
 
+# intialize wandb for logging length penalty
+# wandb.init()
+
 # custom logger for custom metrics
 custom_logger = CustomMetricLogger()
 
@@ -171,47 +176,46 @@ reward_function = CustomRewardFunction(extraction_model,
 
 ########## GRPO setup #############
 
-if ALGORITHM == "GRPO":
 
-    training_args = GRPOConfig(
-        output_dir=RL_TRAINING_FILES, 
-        per_device_train_batch_size=1,
-        per_device_eval_batch_size=6,
-        logging_steps=1, 
-        gradient_checkpointing=True,
-        learning_rate=5e-5,
-        num_train_epochs=10,
-        # weight_decay=0.01,
-        # warmup_steps=17, # TODO:check if this makes any sense at all
-        logging_dir="logs",
-        # save_steps=1,
-        save_total_limit=2,
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        # eval_steps=1,
-        # batch_size=2,
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_loss",
-        gradient_accumulation_steps=3, #TODO: think about whether this is truly necessary
-        report_to="wandb",
-        max_completion_length=2048,
-        max_prompt_length=3000,
-        optim="adamw_8bit",
-        bf16=True,
-        ddp_find_unused_parameters=False,
-        num_generations=9, # Number of generations per prompt
-        )
-
-    # Initialize GRPO trainer
-    trainer = GRPOTrainer(
-        model=policy_model,
-        reward_funcs=reward_function,
-        train_dataset=dataset_train,
-        eval_dataset=dataset_eval,
-        args=training_args,
-        callbacks=[custom_logger],
-        # peft_config=lora_config
+training_args = GRPOConfig(
+    output_dir=RL_TRAINING_FILES, 
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=4,
+    logging_steps=1, 
+    gradient_checkpointing=True,
+    learning_rate=5e-5,
+    num_train_epochs=10,
+    # weight_decay=0.01,
+    # warmup_steps=17, # TODO:check if this makes any sense at all
+    logging_dir="logs",
+    # save_steps=1,
+    save_total_limit=2,
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    # eval_steps=1,
+    # batch_size=2,
+    load_best_model_at_end=True,
+    metric_for_best_model="eval_loss",
+    gradient_accumulation_steps=4, #TODO: think about whether this is truly necessary
+    report_to="wandb",
+    max_completion_length=2048,
+    max_prompt_length=3000,
+    optim="adamw_8bit",
+    bf16=True,
+    ddp_find_unused_parameters=False,
+    num_generations=8, # Number of generations per prompt
     )
+
+# Initialize GRPO trainer
+trainer = GRPOTrainer(
+    model=policy_model,
+    reward_funcs=reward_function,
+    train_dataset=dataset_train,
+    eval_dataset=dataset_eval,
+    args=training_args,
+    callbacks=[custom_logger],
+    # peft_config=lora_config
+)
 
 
 trainer.train()
