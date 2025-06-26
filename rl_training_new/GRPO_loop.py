@@ -98,6 +98,14 @@ dataset_eval = Dataset.from_pandas(prompt_df_eval)
 
 
 
+
+
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
+# vocab_size = len(tokenizer)
+
 base_model = AutoModelForCausalLM.from_pretrained(MODEL,  
                                             #  device_map="auto",  # For GPU/TPU acceleration
                                             device_map=None,
@@ -108,13 +116,13 @@ base_model = AutoModelForCausalLM.from_pretrained(MODEL,
                                                 "bnb_4bit_compute_dtype": torch.bfloat16,
                                                 "bnb_4bit_use_double_quant": True,
                                                 "bnb_4bit_quant_type": "nf4"
-                                                }
+                                                },
+                                                ignore_mismatched_sizes=True
                                             )   # Optimize precision)
 
+# Resize immediately (overwrite if needed)
+# base_model.resize_token_embeddings(vocab_size)
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
 
 qlora_config = LoraConfig(
     r=64,
@@ -145,11 +153,17 @@ reward_model_extraction = AutoModelForSequenceClassification.from_pretrained(REW
 reward_model_detection = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL)
 
+# Ensure model and tokenizer are compatible
+reward_model_extraction.resize_token_embeddings(len(reward_tokenizer))
+reward_model_detection.resize_token_embeddings(len(reward_tokenizer))
+
 extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MODEL_EXTRACTION_LORA).to(device)
 # extraction_model = extraction_model.merge_and_unload()
 
 detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL_DETECTION_LORA).to(device)
 # detection_model = detection_model.merge_and_unload()
+
+
 
 
 # intialize wandb for logging length penalty
@@ -180,7 +194,7 @@ reward_function = CustomRewardFunction(extraction_model,
 training_args = GRPOConfig(
     output_dir=RL_TRAINING_FILES, 
     per_device_train_batch_size=1,
-    per_device_eval_batch_size=4,
+    per_device_eval_batch_size=6,
     logging_steps=1, 
     gradient_checkpointing=True,
     learning_rate=5e-5,
@@ -196,14 +210,15 @@ training_args = GRPOConfig(
     # batch_size=2,
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
-    gradient_accumulation_steps=4, #TODO: think about whether this is truly necessary
+    gradient_accumulation_steps=3, #TODO: think about whether this is truly necessary
     report_to="wandb",
     max_completion_length=2048,
     max_prompt_length=3000,
     optim="adamw_8bit",
     bf16=True,
     ddp_find_unused_parameters=False,
-    num_generations=8, # Number of generations per prompt
+    num_generations=9, # Number of generations per prompt
+    # resume_from_checkpoint=False,
     )
 
 # Initialize GRPO trainer
