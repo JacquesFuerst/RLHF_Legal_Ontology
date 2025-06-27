@@ -153,9 +153,9 @@ reward_model_extraction = AutoModelForSequenceClassification.from_pretrained(REW
 reward_model_detection = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL)
 
-# Ensure model and tokenizer are compatible
-reward_model_extraction.resize_token_embeddings(len(reward_tokenizer))
-reward_model_detection.resize_token_embeddings(len(reward_tokenizer))
+# # Ensure model and tokenizer are compatible
+# reward_model_extraction.resize_token_embeddings(len(reward_tokenizer))
+# reward_model_detection.resize_token_embeddings(len(reward_tokenizer))
 
 extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MODEL_EXTRACTION_LORA).to(device)
 # extraction_model = extraction_model.merge_and_unload()
@@ -194,7 +194,7 @@ reward_function = CustomRewardFunction(extraction_model,
 training_args = GRPOConfig(
     output_dir=RL_TRAINING_FILES, 
     per_device_train_batch_size=1,
-    per_device_eval_batch_size=6,
+    per_device_eval_batch_size=3,
     logging_steps=1, 
     gradient_checkpointing=True,
     learning_rate=5e-5,
@@ -212,7 +212,7 @@ training_args = GRPOConfig(
     metric_for_best_model="eval_loss",
     gradient_accumulation_steps=3, #TODO: think about whether this is truly necessary
     report_to="wandb",
-    max_completion_length=2048,
+    max_completion_length=1024,
     max_prompt_length=3000,
     optim="adamw_8bit",
     bf16=True,

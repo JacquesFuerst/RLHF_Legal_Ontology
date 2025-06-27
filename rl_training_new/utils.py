@@ -552,10 +552,10 @@ class CustomRewardFunction:
                 # add total prompt reward to list of prompt rewards
                 response_reward = (self.weight_extraction * total_reward_extraction + self.weight_detection * total_reward_detection  - self.weight_length_penalty * length_penalty) / num_preconditions
 
-                # add length penalty to logged variabels
-                weighted_length_penalty = self.weight_length_penalty * length_penalty
-                if self.custom_logger is not None:
-                    self.custom_logger.accumulate(weighted_length_penalty)
+                # # add length penalty to logged variabels
+                # weighted_length_penalty = self.weight_length_penalty * length_penalty
+                # if self.custom_logger is not None:
+                #     self.custom_logger.accumulate(weighted_length_penalty)
 
                 #add reward to reward list
                 response_rewards.append(response_reward)
