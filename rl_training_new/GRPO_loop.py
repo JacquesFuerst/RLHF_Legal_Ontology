@@ -197,8 +197,8 @@ training_args = GRPOConfig(
     per_device_eval_batch_size=3,
     logging_steps=1, 
     gradient_checkpointing=True,
-    learning_rate=5e-5,
-    num_train_epochs=4,
+    learning_rate=1e-5,
+    num_train_epochs=10,
     # weight_decay=0.01,
     # warmup_steps=17, # TODO:check if this makes any sense at all
     logging_dir="logs",
@@ -218,7 +218,7 @@ training_args = GRPOConfig(
     bf16=True,
     ddp_find_unused_parameters=False,
     num_generations=9, # Number of generations per prompt
-    # resume_from_checkpoint=False,
+    resume_from_checkpoint=False,
     )
 
 # Initialize GRPO trainer
