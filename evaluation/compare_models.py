@@ -67,7 +67,7 @@ OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 # RL_DATA_PATH = os.getenv("RL_DATA_PATH")
 EVAL_FILE = os.getenv("EVAL_FILE")
 NUM_RESPONSES_EVAL = int(os.getenv("NUM_RESPONSES_EVAL"))  # Number of responses per model
-OUTPUT_EVAL = os.getenv("OUTPUT_EVAL")
+
 
 #TODO: add links for all models to compare in dedicated folder
 
@@ -76,6 +76,8 @@ OUTPUT_EVAL = os.getenv("OUTPUT_EVAL")
 MODEL_NAME_1 = os.getenv("EVAL_MODEL_NAME_1")
 MODEL_NAME_2 = os.getenv("EVAL_MODEL_NAME_2")
 MODEL_NAME_3 = os.getenv("EVAL_MODEL_NAME_3")
+
+OUTPUT_EVAL = os.getenv("OUTPUT_EVAL") + "_" + MODEL_NAME_1 + "_" + MODEL_NAME_2 + "_" + MODEL_NAME_3 + ".text"
 
 RL_TRAINED_ADAPTERS_1 = os.getenv("RL_TRAINED_ADAPTERS_1")
 RL_TRAINED_ADAPTERS_2 = os.getenv("RL_TRAINED_ADAPTERS_2")
@@ -122,6 +124,8 @@ base_model_new_2 = copy.deepcopy(base_model)
 base_model_new_2.to("cuda:2")
 base_model_new_3 = copy.deepcopy(base_model)
 base_model_new_3.to("cuda:3")
+
+
 # base_model_new = AutoModelForCausalLM.from_pretrained(MODEL)
 # base_model_new = AutoModelForCausalLM.from_pretrained(MODEL,  
 #                                             #  device_map="auto",  # For GPU/TPU acceleration
