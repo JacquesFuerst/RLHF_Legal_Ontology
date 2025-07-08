@@ -101,9 +101,9 @@ dataset_eval = Dataset.from_pandas(prompt_df_eval)
 
 
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL)
+tokenizer = AutoTokenizer.from_pretrained(MODEL, ignore_mismatched_sizes=True)
 tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
+# tokenizer.padding_side = "right"
 # vocab_size = len(tokenizer)
 
 base_model = AutoModelForCausalLM.from_pretrained(MODEL,  
@@ -121,6 +121,7 @@ base_model = AutoModelForCausalLM.from_pretrained(MODEL,
                                             )   # Optimize precision)
 
 # Resize immediately (overwrite if needed)
+base_model.resize_token_embeddings(len(tokenizer))
 # base_model.resize_token_embeddings(vocab_size)
 
 
@@ -151,11 +152,11 @@ policy_model.print_trainable_parameters()
 # Load reward model feedback extraction
 reward_model_extraction = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_model_detection = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
-reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL)
+reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL, ignore_mismatched_sizes=True)
 
 # # Ensure model and tokenizer are compatible
-# reward_model_extraction.resize_token_embeddings(len(reward_tokenizer))
-# reward_model_detection.resize_token_embeddings(len(reward_tokenizer))
+reward_model_extraction.resize_token_embeddings(len(reward_tokenizer))
+reward_model_detection.resize_token_embeddings(len(reward_tokenizer))
 
 extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MODEL_EXTRACTION_LORA).to(device)
 # extraction_model = extraction_model.merge_and_unload()
@@ -203,9 +204,10 @@ training_args = GRPOConfig(
     # warmup_steps=17, # TODO:check if this makes any sense at all
     logging_dir="logs",
     # save_steps=1,
-    save_total_limit=4,
+    save_total_limit=10,
     eval_strategy="epoch",
     save_strategy="epoch",
+    save_epochs=2,
     # eval_steps=1,
     # batch_size=2,
     load_best_model_at_end=True,
