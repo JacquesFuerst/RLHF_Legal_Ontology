@@ -80,8 +80,8 @@ MODEL_NAME_1 = os.getenv("EVAL_MODEL_NAME_1")
 MODEL_NAME_2 = os.getenv("EVAL_MODEL_NAME_2")
 MODEL_NAME_3 = os.getenv("EVAL_MODEL_NAME_3")
 
-OUTPUT_EVAL = os.getenv("OUTPUT_EVAL") + "_" + MODEL_NAME_1 + "_" + MODEL_NAME_2 +  ".txt" # "_" + MODEL_NAME_3 +
-EVAL_ANSWERS_CSV_MODEL_COMP = os.getenv("EVAL_ANSWERS_CSV_MODEL_COMP") + "_" + MODEL_NAME_1 + "_" + MODEL_NAME_2 + ".csv" #"_" + MODEL_NAME_3 +
+OUTPUT_EVAL = os.getenv("OUTPUT_EVAL") + "_" + MODEL_NAME_1 + "_" + MODEL_NAME_2 + "_" + MODEL_NAME_3 + ".txt" # 
+EVAL_ANSWERS_CSV_MODEL_COMP = os.getenv("EVAL_ANSWERS_CSV_MODEL_COMP") + "_" + MODEL_NAME_1 + "_" + MODEL_NAME_2 + "_" + MODEL_NAME_3 + ".csv" #
 
 RL_TRAINED_ADAPTERS_1 = os.getenv("RL_TRAINED_ADAPTERS_1")
 RL_TRAINED_ADAPTERS_2 = os.getenv("RL_TRAINED_ADAPTERS_2")
@@ -157,30 +157,30 @@ base_model_new_2 = AutoModelForCausalLM.from_pretrained(MODEL,
                                                 }
                                             )   # Optimize precision)
 
-# base_model_new_3 = AutoModelForCausalLM.from_pretrained(MODEL,  
-#                                             #  device_map="auto",  # For GPU/TPU acceleration
-#                                             device_map={"": "cuda:1"},
-#                                             torch_dtype=torch.bfloat16,
-#                                             #  load_in_4bit=True,
-#                                             quantization_config={
-#                                                 "load_in_4bit": True,
-#                                                 "bnb_4bit_compute_dtype": torch.bfloat16,
-#                                                 "bnb_4bit_use_double_quant": True,
-#                                                 "bnb_4bit_quant_type": "nf4"
-#                                                 }
-#                                             )   # Optimize precision)
+base_model_new_3 = AutoModelForCausalLM.from_pretrained(MODEL,  
+                                            #  device_map="auto",  # For GPU/TPU acceleration
+                                            device_map={"": "cuda:1"},
+                                            torch_dtype=torch.bfloat16,
+                                            #  load_in_4bit=True,
+                                            quantization_config={
+                                                "load_in_4bit": True,
+                                                "bnb_4bit_compute_dtype": torch.bfloat16,
+                                                "bnb_4bit_use_double_quant": True,
+                                                "bnb_4bit_quant_type": "nf4"
+                                                }
+                                            )   # Optimize precision)
 
 
 new_model_1 = PeftModel.from_pretrained(base_model_new, RL_TRAINED_ADAPTERS_1)
 new_model_2 = PeftModel.from_pretrained(base_model_new_2, RL_TRAINED_ADAPTERS_2)
-# new_model_3 = PeftModel.from_pretrained(base_model_new_3, RL_TRAINED_ADAPTERS_3)
+new_model_3 = PeftModel.from_pretrained(base_model_new_3, RL_TRAINED_ADAPTERS_3)
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL)
 
 base_model.eval()
 new_model_1.eval()
 new_model_2.eval()
-# new_model_3.eval()
+new_model_3.eval()
 
 
 # get evaluation dataset
@@ -202,7 +202,7 @@ for i in range(NUM_RESPONSES_EVAL):
     df[f'response_base_model_{i+1}'] = df['prompt'].apply(lambda x: generate_response(x, tokenizer, base_model))
     df[f'response_model_{MODEL_NAME_1}_{i+1}'] = df['prompt'].apply(lambda x: generate_response(x, tokenizer, new_model_1))
     df[f'response_new_model__{MODEL_NAME_2}_{i+1}'] = df['prompt'].apply(lambda x: generate_response(x, tokenizer, new_model_2))
-    # df[f'response_new_model__{MODEL_NAME_3}_{i+1}'] = df['prompt'].apply(lambda x: generate_response(x, tokenizer, new_model_3))
+    df[f'response_new_model__{MODEL_NAME_3}_{i+1}'] = df['prompt'].apply(lambda x: generate_response(x, tokenizer, new_model_3))
 
 # Store in CSV
 df.to_csv(EVAL_ANSWERS_CSV_MODEL_COMP, index=False, sep=';')
@@ -216,13 +216,13 @@ df.to_csv(EVAL_ANSWERS_CSV_MODEL_COMP, index=False, sep=';')
 # Create list of column names
 new_cols_1 = [f'response_model_{MODEL_NAME_1}_{j+1}' for j in range(NUM_RESPONSES_EVAL)]
 new_cols_2 = [f'response_new_model__{MODEL_NAME_2}_{j+1}' for j in range(NUM_RESPONSES_EVAL)]
-# new_cols_3 = [f'response_new_model__{MODEL_NAME_3}_{j+1}' for j in range(NUM_RESPONSES_EVAL)]
+new_cols_3 = [f'response_new_model__{MODEL_NAME_3}_{j+1}' for j in range(NUM_RESPONSES_EVAL)]
 base_cols = [f'response_base_model_{j+1}' for j in range(NUM_RESPONSES_EVAL)]
 
 # Select columns and convert to list of lists (rows)
 candidates_new_1 = df[new_cols_1].values.tolist()
 candidates_new_2 = df[new_cols_2].values.tolist()
-# candidates_new_3 = df[new_cols_3].values.tolist()
+candidates_new_3 = df[new_cols_3].values.tolist()
 candidates_base = df[base_cols].values.tolist()
 
 precon_text_list = df['precondition_texts'].to_list()
@@ -244,7 +244,7 @@ for dict1, dict2 in zip(precon_text_list, precon_pos_list):
 # Flatten the candidate lists
 candidates_new_flat_1 = [resp for row in candidates_new_1 for resp in row]
 candidates_new_flat_2 = [resp for row in candidates_new_2 for resp in row]
-# candidates_new_flat_3 = [resp for row in candidates_new_3 for resp in row]
+candidates_new_flat_3 = [resp for row in candidates_new_3 for resp in row]
 candidates_base_flat = [resp for row in candidates_base for resp in row]
 
 # Repeat each reference NUM_RESPONSES times to match the flattened predictions
@@ -260,14 +260,14 @@ rouge = evaluate.load('rouge')
 
 results_new_1 = rouge.compute(predictions=candidates_new_flat_1, references=references_flat)
 results_new_2 = rouge.compute(predictions=candidates_new_flat_2, references=references_flat)
-# results_new_3 = rouge.compute(predictions=candidates_new_flat_3, references=references_flat)
+results_new_3 = rouge.compute(predictions=candidates_new_flat_3, references=references_flat)
 results_base = rouge.compute(predictions=candidates_base_flat, references=references_flat)
     
 
 
 print(f"Results ROUGE-L new: {results_new_1}")
 print(f"Results ROUGE-L new 2: {results_new_2}")
-# print(f"Results ROUGE-L new 3: {results_new_3}")
+print(f"Results ROUGE-L new 3: {results_new_3}")
 print(f"Results ROUGE-L base: {results_base}")
 
 
@@ -290,12 +290,12 @@ P_new_2, R_new_2, F1_new_2 = score(
     num_layers=12,
     lang='nl')
 
-# P_new_3, R_new_3, F1_new_3 = score(
-#     candidates_new_flat_3, 
-#     references_flat, 
-#     model_type=bert_model, 
-#     num_layers=12,
-#     lang='nl')
+P_new_3, R_new_3, F1_new_3 = score(
+    candidates_new_flat_3, 
+    references_flat, 
+    model_type=bert_model, 
+    num_layers=12,
+    lang='nl')
 
 P_base, R_base, F1_base = score(
     candidates_base_flat, 
@@ -306,10 +306,10 @@ P_base, R_base, F1_base = score(
 
 print(f"BERT Score metrics {MODEL_NAME_1}: {P_new_1, R_new_1, F1_new_1}")
 print(f"BERT Score metrics {MODEL_NAME_2}: {P_new_2, R_new_2, F1_new_2}")
-# print(f"BERT Score metrics {MODEL_NAME_3}: {P_new_3, R_new_3, F1_new_3}")
+print(f"BERT Score metrics {MODEL_NAME_3}: {P_new_3, R_new_3, F1_new_3}")
 print(f"BERT Score metrics base: {P_base, R_base, F1_base}")
 
-print(f"F1 new {MODEL_NAME_1}: {F1_new_1.mean()}, F1 new {MODEL_NAME_2}: {F1_new_2.mean()}, F1 base: {F1_base.mean()}") #F1 new {MODEL_NAME_3}: {F1_new_3.mean()},
+print(f"F1 new {MODEL_NAME_1}: {F1_new_1.mean()}, F1 new {MODEL_NAME_2}: {F1_new_2.mean()}, F1 new {MODEL_NAME_3}: {F1_new_3.mean()}, F1 base: {F1_base.mean()}") #
 
 
 
@@ -319,13 +319,13 @@ with open(OUTPUT_EVAL, "w") as file:
     print(f"Base results ROUGE: {results_base}", file=file)
     print(f"New model {MODEL_NAME_1} results ROUGE: {results_new_1}", file=file)
     print(f"New model {MODEL_NAME_2} results ROUGE: {results_new_2}", file=file)
-    # print(f"New model {MODEL_NAME_3} results ROUGE: {results_new_3}", file=file)
+    print(f"New model {MODEL_NAME_3} results ROUGE: {results_new_3}", file=file)
 
     print(f"BERT Score metrics {MODEL_NAME_1}: {P_new_1, R_new_1, F1_new_1}", file=file)
     print(f"BERT Score metrics {MODEL_NAME_2}: {P_new_2, R_new_2, F1_new_2}", file=file)
-    # print(f"BERT Score metrics {MODEL_NAME_3}: {P_new_3, R_new_3, F1_new_3}", file=file)
+    print(f"BERT Score metrics {MODEL_NAME_3}: {P_new_3, R_new_3, F1_new_3}", file=file)
     print(f"BERT Score metrics base: {P_base, R_base, F1_base}", file=file)
 
-    print(f"F1 new {MODEL_NAME_1}: {F1_new_1.mean()}, F1 new {MODEL_NAME_2}: {F1_new_2.mean()}, F1 base: {F1_base.mean()}", file=file) #F1 new {MODEL_NAME_3}: {F1_new_3.mean()},
+    print(f"F1 new {MODEL_NAME_1}: {F1_new_1.mean()}, F1 new {MODEL_NAME_2}: {F1_new_2.mean()}, F1 new {MODEL_NAME_3}: {F1_new_3.mean()}, F1 base: {F1_base.mean()}", file=file) #
     
 

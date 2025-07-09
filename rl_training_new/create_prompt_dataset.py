@@ -32,8 +32,11 @@ def get_whole_pdf_text(doc):
     Retrieve the whole reduced document to reduce memory usage whilst loading the document.
     """
 
-    if 'participatiewet' in doc:
+    print(doc)
+
+    if 'Participatiewet' in doc:
         pdf = os.getenv("KB_FILE_1")
+        print("We use this")
     elif 'Vw' in doc:
         pdf = os.getenv("KB_FILE_2")
     else:

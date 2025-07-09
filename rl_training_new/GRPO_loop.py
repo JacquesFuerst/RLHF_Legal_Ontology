@@ -20,6 +20,21 @@ import json
 
 import wandb
 
+import random
+import numpy as np
+
+
+# Set a fixed seed for reproducibility
+SEED = 45 # or any integer you prefer
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 # from types import MethodType
 # import json
 # import sys
@@ -199,7 +214,7 @@ training_args = GRPOConfig(
     logging_steps=1, 
     gradient_checkpointing=True,
     learning_rate=5e-5,
-    num_train_epochs=10,
+    num_train_epochs=4,
     # weight_decay=0.01,
     # warmup_steps=17, # TODO:check if this makes any sense at all
     logging_dir="logs",
@@ -207,7 +222,6 @@ training_args = GRPOConfig(
     save_total_limit=10,
     eval_strategy="epoch",
     save_strategy="epoch",
-    save_epochs=2,
     # eval_steps=1,
     # batch_size=2,
     load_best_model_at_end=True,
