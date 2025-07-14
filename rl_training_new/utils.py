@@ -99,13 +99,17 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
     """
     Tokenization function choosing the best window in the answer using similarity score with ground truth.
     """
+    # Ensure max_length is not greater than 512
+    max_length = min(max_length, 512)
+
+
     # print("response text", examples["response_text"])
     response_tokens = len(tokenizer(examples["response_text"], truncation=False)[0])
     
     precond_tokens = len(tokenizer(examples["precondition_text"], truncation=False)[0])
-    # print(precond_tokens)
+    print(precond_tokens)
     pos_tokens = len(tokenizer(examples["precondition_position"], truncation=False)[0])
-    # print(pos_tokens)
+    print(pos_tokens)
 
     precon_text = examples["precondition_text"]
     precon_pos = examples["precondition_position"]
@@ -139,7 +143,8 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
         # print(examples["response_text"])
         if num_tokens > max_length:
             # print("We get here at all")
-            window_size = max_length - (precond_tokens + pos_tokens)
+            # window_size = max_length - (precond_tokens + pos_tokens)
+            window_size = max(max_length - (precond_tokens + pos_tokens), 1)
             stride = window_size // 2
             ground_truth = precon_text + " " + precon_pos
             text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
