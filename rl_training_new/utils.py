@@ -107,9 +107,10 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
     response_tokens = len(tokenizer(examples["response_text"], truncation=False)[0])
     
     precond_tokens = len(tokenizer(examples["precondition_text"], truncation=False)[0])
-    print(precond_tokens)
+    # print(f"Precondition tokens: {precond_tokens}")
     pos_tokens = len(tokenizer(examples["precondition_position"], truncation=False)[0])
-    print(pos_tokens)
+    # print(f"precond text: {examples['precondition_text']}")
+    # print(f"Pos tokens: {pos_tokens}")
 
     precon_text = examples["precondition_text"]
     precon_pos = examples["precondition_position"]
@@ -124,10 +125,15 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             window_size = max_length - precond_tokens
             stride = window_size // 2
             ground_truth = precon_text
+            # print(f"Window size: {window_size}")
+            assert 0 <= window_size <= max_length, "The window size must be between 0 and max_length."
+
             text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
             # print(text)
             # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], text)] --> batched version
             combined_texts = f"{precon_text} {text}"
+            # combined_tokens = len(tokenizer(examples["precondition_position"], truncation=True, padding="max_length", max_length=max_length)[0])
+
         else:
             # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], examples["response_text"])] --> batched version
             combined_texts = f"{precon_text} {response}"
@@ -147,6 +153,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             window_size = max(max_length - (precond_tokens + pos_tokens), 1)
             stride = window_size // 2
             ground_truth = precon_text + " " + precon_pos
+            assert 0 <= window_size <= max_length, "The window size must be between 0 and max_length."
             text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
 
             #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], text)] --> batched version
@@ -159,8 +166,14 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
     #Only return pytorch tensors if doing RL training loop
     if rl_training:
         tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length", max_length=max_length)
+        if len(tokenized['input_ids']) != 512:
+            print(f"Tokenized length: {len(tokenized['input_ids'][0])}")
+
+        assert len(tokenized['input_ids'][0] <= max_length), "Tokenized input exceeds max_length."
     else:
         tokenized = tokenizer(combined_texts, truncation=True, padding="max_length", max_length=max_length)
+        if len(tokenized['input_ids']) != 512:
+            print(f"Tokenized length: {len(tokenized['input_ids'])}")
 
     return tokenized
 
@@ -490,6 +503,10 @@ class CustomRewardFunction:
         precondition_texts_list = kwargs["precondition_texts"]
         precondition_positions_list = kwargs["precondition_positions"]
 
+        # Make sure that reward models and tokenizers are compatible
+        self.reward_model_extraction.resize_token_embeddings(len(self.reward_tokenizer))
+        self.reward_model_detection.resize_token_embeddings(len(self.reward_tokenizer))
+
         
 
         # print(precondition_texts_list)
@@ -537,6 +554,10 @@ class CustomRewardFunction:
 
                     
                     # get reward model valuation
+                    # print(f"Inputs extraction type: {type(inputs_extraction)}")
+                    # print(f"Inputs detection type: {type(inputs_detection)}")
+                    # print(f"Inputs extraction shape: {inputs_extraction['input_ids'].shape}")
+                    # print(f"Inputs detection shape: {inputs_detection['input_ids'].shape}")
                     outputs_extraction = self.reward_model_extraction(**inputs_extraction)
                     outputs_detection = self.reward_model_detection(**inputs_detection)
                     
