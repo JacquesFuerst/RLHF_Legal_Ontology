@@ -23,6 +23,8 @@ import wandb
 import random
 import numpy as np
 
+from sentence_transformers import SentenceTransformer
+
 
 # Set a fixed seed for reproducibility
 SEED = 45 # or any integer you prefer
@@ -167,6 +169,7 @@ policy_model.print_trainable_parameters()
 ######## Model Lodading ##########
 
 # Load reward model feedback extraction
+
 reward_model_extraction = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_model_detection = AutoModelForSequenceClassification.from_pretrained(REWARD_MODEL, num_labels=1)
 reward_tokenizer = AutoTokenizer.from_pretrained(REWARD_MODEL, ignore_mismatched_sizes=True)
@@ -181,8 +184,14 @@ extraction_model = PeftModel.from_pretrained(reward_model_extraction, REWARD_MOD
 detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL_DETECTION_LORA).to(device)
 # detection_model = detection_model.merge_and_unload()
 
+extraction_model.eval()
+detection_model.eval()
 
+# best window function needed model
+similarity_model = SentenceTransformer('NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers').to(device)
 
+similarity_model.eval()
+# similarity_model.to(device)
 
 # intialize wandb for logging length penalty
 # wandb.init()
@@ -191,17 +200,19 @@ detection_model = PeftModel.from_pretrained(reward_model_detection, REWARD_MODEL
 custom_logger = CustomMetricLogger()
 
 # Create the custom reward function
-reward_function = CustomRewardFunction(extraction_model, 
-                                       detection_model, 
-                                       reward_tokenizer, 
-                                       MAX_LENGTH, STRIDE, 
-                                       RL_TOKENIZATION, 
-                                       device, 
-                                       weight_extraction=WEIGHT_EXTRACTION, 
-                                       weight_detection=WEIGHT_DETECTION,
-                                       weight_length_penalty=WEIGHT_LENGTH_PENALTY, 
-                                       detection_difference=DETECTION_DIFFERENCE,
-                                       custom_logger=custom_logger
+reward_function = CustomRewardFunction( 
+                                        extraction_model, 
+                                        detection_model, 
+                                        reward_tokenizer, 
+                                        MAX_LENGTH, STRIDE, 
+                                        RL_TOKENIZATION, 
+                                        device,
+                                        similarity_model=similarity_model, 
+                                        weight_extraction=WEIGHT_EXTRACTION, 
+                                        weight_detection=WEIGHT_DETECTION,
+                                        weight_length_penalty=WEIGHT_LENGTH_PENALTY, 
+                                        detection_difference=DETECTION_DIFFERENCE,
+                                        custom_logger=custom_logger
                                        )
 
 
@@ -211,7 +222,7 @@ reward_function = CustomRewardFunction(extraction_model,
 
 training_args = GRPOConfig(
     output_dir=RL_TRAINING_FILES, 
-    per_device_train_batch_size=3,
+    per_device_train_batch_size=1,
     per_device_eval_batch_size=3,
     logging_steps=1, 
     gradient_checkpointing=True,
@@ -223,7 +234,7 @@ training_args = GRPOConfig(
     save_strategy="epoch",
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
-    gradient_accumulation_steps=4, #TODO: think about whether this is truly necessary
+    gradient_accumulation_steps=3, #TODO: think about whether this is truly necessary
     report_to="wandb",
     max_completion_length=1024,
     max_prompt_length=3000,

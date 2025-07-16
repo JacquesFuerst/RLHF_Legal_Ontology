@@ -48,13 +48,15 @@ def count_categories(tensor, categories):
     return torch.tensor(counts)
 
 
-def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512, stride=256):
+def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512, stride=256, similarity_model=None):
     """
     Find the best sliding window of text that is most similar to the ground truth.
     Uses a semantic similarity model to evaluate the windows.
     """
-    similarity_model = SentenceTransformer('NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers')
-    similarity_model.to(device)
+    if similarity_model is None:
+        similarity_model = SentenceTransformer('NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers')
+        similarity_model.to(device)
+        print("Loading the model in the function")
     
     # Tokenize the full text
     tokens = tokenizer.tokenize(long_text)
@@ -94,7 +96,7 @@ def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512
 
 
 # tokenize queries and answers together to provide proper context to reward model
-def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride, device, rl_training=False):
+def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length, stride, device, rl_training=False, similarity_model=None):
 
     """
     Tokenization function choosing the best window in the answer using similarity score with ground truth.
@@ -128,7 +130,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             # print(f"Window size: {window_size}")
             assert 0 <= window_size <= max_length, "The window size must be between 0 and max_length."
 
-            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
+            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride, similarity_model=similarity_model)
             # print(text)
             # combined_texts = [f"{t} {r}" for t, r in zip(examples["precondition_text"], text)] --> batched version
             combined_texts = f"{precon_text} {text}"
@@ -154,7 +156,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
             stride = window_size // 2
             ground_truth = precon_text + " " + precon_pos
             assert 0 <= window_size <= max_length, "The window size must be between 0 and max_length."
-            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride)
+            text = find_best_window(response, ground_truth, device, tokenizer, window_size=window_size, stride=stride, similarity_model=similarity_model)
 
             #combined_texts = [f"{t} {p} {r}" for t, p, r in zip(examples["precondition_text"], examples["precondition_position"], text)] --> batched version
             
@@ -166,7 +168,7 @@ def tokenize_fn_with_best_window(examples, feedback_train, tokenizer, max_length
     #Only return pytorch tensors if doing RL training loop
     if rl_training:
         tokenized = tokenizer(combined_texts, return_tensors='pt', truncation=True, padding="max_length", max_length=max_length)
-        if len(tokenized['input_ids']) != 512:
+        if len(tokenized['input_ids'][0]) != 512:
             print(f"Tokenized length: {len(tokenized['input_ids'][0])}")
 
         assert len(tokenized['input_ids'][0] <= max_length), "Tokenized input exceeds max_length."
@@ -468,7 +470,7 @@ Other useful training things, look at later if needed.
 #################### Reward function RL training #################################
 
 class CustomRewardFunction:
-    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, weight_extraction=1.0, weight_detection=1.0, weight_length_penalty=0.01, detection_difference=5, custom_logger=None):
+    def __init__(self, reward_model_extraction, reward_model_detection, reward_tokenizer, max_length, stride, rl_tokenization, device, similarity_model, weight_extraction=1.0, weight_detection=1.0, weight_length_penalty=0.01, detection_difference=5, custom_logger=None):
         """
         Custom reward function that calculates rewards based on the extraction and detection of preconditions in responses.
         Args:
@@ -490,6 +492,7 @@ class CustomRewardFunction:
         self.rl_tokenization = rl_tokenization
         self.detection_difference = detection_difference
         self.custom_logger = custom_logger
+        self.similarity_model = similarity_model
         
 
         self.__name__ = "precondition_reward_function"
@@ -547,8 +550,8 @@ class CustomRewardFunction:
                         inputs_extraction = tokenize_fn_basic(inputs, "feedback_extraction", self.reward_tokenizer, rl_training=True).to(self.device)
                         inputs_detection = tokenize_fn_basic(inputs, "feedback_detection", self.reward_tokenizer, rl_training=True).to(self.device)
                     elif self.rl_tokenization == "best_window":
-                        inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
-                        inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True).to(self.device)
+                        inputs_extraction = tokenize_fn_with_best_window(inputs, "feedback_extraction", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True, similarity_model=self.similarity_model).to(self.device)
+                        inputs_detection = tokenize_fn_with_best_window(inputs, "feedback_detection", self.reward_tokenizer, self.max_length, self.stride, self.device, rl_training=True, similarity_model=self.similarity_model).to(self.device)
 
                     
 
@@ -558,8 +561,9 @@ class CustomRewardFunction:
                     # print(f"Inputs detection type: {type(inputs_detection)}")
                     # print(f"Inputs extraction shape: {inputs_extraction['input_ids'].shape}")
                     # print(f"Inputs detection shape: {inputs_detection['input_ids'].shape}")
-                    outputs_extraction = self.reward_model_extraction(**inputs_extraction)
-                    outputs_detection = self.reward_model_detection(**inputs_detection)
+                    with torch.no_grad():
+                        outputs_extraction = self.reward_model_extraction(**inputs_extraction)
+                        outputs_detection = self.reward_model_detection(**inputs_detection)
                     
                     # add up rewads for all preconditions
                     reward_extraction = outputs_extraction.logits.item()
