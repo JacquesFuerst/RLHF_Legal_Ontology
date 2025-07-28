@@ -83,7 +83,8 @@ def find_best_window(long_text, ground_truth, device, tokenizer, window_size=512
         window_text = tokenizer.convert_tokens_to_string(window_tokens)
         
         # Calculate cosine similarity with ground truth
-        embeddings = similarity_model.encode([window_text, ground_truth])
+        with torch.no_grad():
+            embeddings = similarity_model.encode([window_text, ground_truth])
         similarity = np.dot(embeddings[0], embeddings[1]) / (
             np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
         )

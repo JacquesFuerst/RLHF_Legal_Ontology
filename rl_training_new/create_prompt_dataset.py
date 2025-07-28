@@ -77,6 +77,10 @@ def generate_prompts(file):
         type = datapoint["type"]
         text = datapoint["text"]
         doc = datapoint["file"]
+
+        # check that document is not participatiewet to see if that improves model learning
+        # if not 'Participatiewet' in doc:
+
         context = get_whole_pdf_text(doc)
         number_preconditions = len(precon_texts)
 
