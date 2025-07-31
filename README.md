@@ -67,9 +67,14 @@ This was supposed to be used for the more comprehensive RAG architecture, but th
 
 
 
+
+
 ## custom metrics
 
 This folder is meant for logging custom metrics throughout RL training. In the research, it was used for logging the length penalty integrated into the reward function. Each file in this folder contains the length penalty throughout training for each training run, with the unique identifier fo the training run in the file name. this is commented out in the RL training code since it was not needed after it was obvious that the length penalty did not improve training, but could be reinstated if wanting to log other custom metrics to wandb in the future.
+
+
+
 
 
 ## data
@@ -121,6 +126,8 @@ This is the synthetic feedback gathered from the feedback model (bth sets, the m
 These are the relevant articles from the three use cases we touch upon each in one PDF file.
 
 
+
+
 ## embeddings
 
 These are for the vector database for the initial RAG architecture.
@@ -151,17 +158,32 @@ This folder contains model weights that are the results of the RL training and u
 
 This is a script to genearte model answers to prompts from the test set after RL training and then imediately quantitatively evaluate their answers. It store the answers and quantiative evalution in the needed data folder.
 
+
+
+
 ## models
 
 These are scripts for loading the models used in the RAG system. They were not used in the research. The huggingface folder contains scripts to load models from huggingface, the ollama folder to load models from ollama.
+
+
+
 
 ## reward_training_files
 
 This folder contains the tokenized data and the weights (lora adapters) that result from Reward model training and are used for loading the rewad model for RL trianing.
 
+
+
+
+
 ## rl_training_files
 
 This folder contains checkpoints of the model weights (lora adapaters) that result from RL trainig. Each algorithm has its own folder, the only one used in the research is the one for GRPO.
+
+
+
+
+
 
 ## rl_training_new
 
@@ -217,6 +239,43 @@ utils such as the custom reward function, best window function, etc used in rewa
 
 
 
+## scripts
+
+this folder contains scripts mainly for dataset processing and creation.
+
+### scripts\act_extraction.ipynb
+
+A short jupyter notebook for extracting acts from the original JSOn files given for the rule-editor. This was used to create the ground truth JSON data files.
+
+### scripts\create_human_feedback_dataset.py
+
+Script to create human feedback datasets for data collection from ground truth JSON files.
+
+### scripts\create_synthetic_feedback_dataset.py
+
+Script to create synthetic feedback dataset for data collection from ground truth JSON files.
+
+### scripts\fact_extraction.ipynb
+
+A short jupyter notebook for extracting facts from the original JSOn files given for the rule-editor. this was used to create the ground truth json data files.
+
+
+### scripts\generate_RAG_answers.py
+
+This was not used in the research, it was meant for generating RAG answers from the initial comprehensive RAG architecture.
+
+
+### scripts\generate_synthetic_feedback.py
+
+Script used to generate synthetic feedback with the feedback model and store it in a csv file.
+
+### scripts\prompt_struc_eval.py
+
+Script used for qualitative prompt structure evalutation in the research.
+
+### scripts\test_llm.py
+
+Used to test LLM inference when GPUs were overloaded and LLms were returning gibberish. Not used in the research.
 
 
 
@@ -225,6 +284,48 @@ utils such as the custom reward function, best window function, etc used in rewa
 
 These are the wandb logs for the RL training.
 
+
+
+
+## .env
+
+The environmeent fiel used for all processes in this project. It should be of the folowing structure:
+
+
+
+
+## .gitignore
+
+For files not to push to github/lab.
+
+
+
+
+## data.zip
+
+Zipped data folder without informed consent.
+
+
+## device_config.py
+
+Contains get_device function used once in RAG architecture not used in research, so essentially redundant.
+
+
+
+## main.py
+
+Conatins code to run RAG, not used in research.
+
+
+
+## output.json
+
+This is the output from test_llm.py, not used in the research.
+
+
+## requirements.txt
+
+Required packages for the project. Not comprehensive and it should be noted that we used different miniconda environments to run RL training, inference, the human user interface etc.
 
 
 
