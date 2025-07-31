@@ -2,72 +2,234 @@
 
 This project explores using RLHF and RLAIF to finetune a language model (Mistral-7B0Instruct-v0.3) using a small, domain specific dataset of 26 prompts in total (18 train, 4 eval, 4 test; about 3000 tokens each) from the Dutch legal domain. The goal is to evaluate how effective this method can be in a sparse data scenario to see whether it could be adapted in a similar setting, where possibly more resources of some dimension are available.
 
-## Table of Contents
-- [Installation- Usage
-- Dataset
-- Training Details
-- Results
-- Citation
-- License
+
+# Script overview
+
+## app
+
+### app\content\definitions.html
+
+These were definitions loaded into streamlit_app_human_feedback.py before revising the user interface. Now they are loaded in the beginning of the python script, but not used.
+
+### app\informed_consent_pdf_style.css
+
+This is the css configuraiton for the informed consent PDF (such that informed consent is stored in a readable format). It is used in the utils_human_feedback.py fiel for loading informed consent into a PDF file. It was used for human feedback data collection in the thesis.
+
+### app\informed_consent.html
+
+This is the informed consent HTML page as used in streamlit_app_human_feedback.py. It was used for human feedback data collection in the thesis. 
+
+### app\study_information.html
+
+This is the informed consent HTML page as used in streamlit_app_human_feedback.py. It was used for the user interface for human feedback data collection in the thesis. 
+
+### app\json_handling.py
+
+some functions for reading and writing to json fiels that are used in the human feedback user interface and for creating synthetic data in generate_synthetic feedback.py. For the thesis, this was needed to store the feedback data in JSON files to later use them for training and such.
+
+### app\streamlit_app_human_fedback.py
+
+This file contains the python code relevant for the human user interface. This was used in the thesis for collecting human feedback on the model answers.
+
+### app\streamlit_app_RAG.py
+
+This is a basic RAG interface implemented in streamlit. It was used in the very beginning of the research project when I was still contemplating on using more RAG like architectures. 
+
+### app\streamlit_app_synthetic_feedback.py
+
+This is a RAG system in which the feedback from the feedback model should immediatly be returned once the generation model has generated the answer to the prompt. Once again, this was developed initially when I was thinking that I would use a comprehensive RAG architecture in the thesis project. This part is not working sinc it was abandoned before I made it work, however.
+
+### app\utils_human_feedback.py
+
+These are functions used in the human feedback user interface. Once again, this is part of the code for the human feedback data collection.
+
+
+## chains
+
+
+### chains\feedback_chain.py
+
+This is the chain that is supposed to be used in streamlit_app_synthetic_feedback.py. Still, this implementation is not working and was not used in the research itself.
+
+### chains\retriever.py
+
+This is the retriever in the originally intended RAG system and is used in simple_chain.py. This was used for generating the prompts for the generation model in the research by inserting the right context document (through the get_whole_doc function).
+
+### chains\simple_chain.py
+
+This is used to generate prompts for the generation model, also to test the generation model. It was used for creating the prompt dataset in the research and also for generating the answers to be evaluated by the feeddback models.
+
+
+### chains\synthetic_feedback.py
+
+This was supposed to be used for the more comprehensive RAG architecture, but the functions in this file are not working properly and t was abandoned and not used in the research in the end.
 
 
 
-## Installation
 
-Clone the repository and install dependencies:
+## custom metrics
 
-```bash
-git clone https://github.com/yourusername/your-repo.git #TODO: add my github repo where I push the code
-cd your-repo
-pip install -r requirements.txt
-```
-
-## Usage
-
-To run inference:
-
-```bash
-python run_inference.py --model_path ./checkpoints/mistral-finetuned
-```
+This folder is meant for logging custom metrics throughout RL training. In the research, it was used for logging the length penalty integrated into the reward function. Each file in this folder contains the length penalty throughout training for each training run, with the unique identifier fo the training run in the file name. this is commented out in the RL training code since it was not needed after it was obvious that the length penalty did not improve training, but could be reinstated if wanting to log other custom metrics to wandb in the future.
 
 
-# Data 
+## data
 
-The dataset consists of several dimensions with ~3000 tokens each, designed to test the model's reasoning and domain adaptation. See `data/README.md` for details. 
+This folder can be found in the data.zip file on github/gitlab.
 
-TODO: write out details of each folder...
+### data\evaluation
+
+This folder contains the model answers per test set prompt for the evaluation after RL training generated by the different model versions in csv files (3 models at a time). It also contains the quantitative evaluation of the answers in txt files.
+
+### data\ground_truth
+
+This folder contains the JSON files for all act/fact use cases that include all acts and facts with their preconditions and positions in the text.
+
+### data\human_feedback
+
+This folder contains the human feedback in csv files with a unique identifier per participant (some had several csv files since they did sevreal datasets, this can be routed back through the informed consent files). It is the data from the human feedback data collection.
+
+### data\informed_consent
+
+PDF files for the informed consent given by all participants. They can be mapped one to one to the human feedback files through their unique identifiers.
+
+### data\model answers
+
+This folder contains JSON files in the same structure as the ground truth, but additionally with the generated model answer per act/fact for the feeback collection. The answers were loaded into the human feedback user itnerface and passed to the feedback model in the dfeedback collection during the research.
+
+### data\participant_data
+
+These are JSON files created from the ground truth for each participant, they were iterated through in the human feedback user interface. They do not contain any new content, but just reorganized the data based on need for the feedback collection.
+
+### data\prompt_dataset
+
+This contains all the prompts passed to the generation model throughout RL training in form of a csv file.
+
+### data\reward_train_eval_test
+
+These are the train, eval and test splits of the feedback data for fine-tuning the reward model.
+
+### data\RL_train_eval_test
+
+These are the train, eval and test splits of the prompt dataset for fine-tuning the generation model in the RL loop.
+
+### data\synthetic_feedback
+
+This is the synthetic feedback gathered from the feedback model (bth sets, the model was asked to return two answers) in csv format. It should be noted that the header is missing and needed to be added manually during data processing.
+
+### data\text
+
+These are the relevant articles from the three use cases we touch upon each in one PDF file.
 
 
-## Training Details
+## embeddings
 
-- Model: Mistral 7B Instruct v0.3
-- GPUs: 3x L40S
-- Optimizer: AdamW-8bit
-- Epochs: 10
-- Batch size: 2
+These are for the vector database for the initial RAG architecture.
 
+### embeddings\data_extraction.py
 
+This is used for extracting the text from the PDf documents it is contained in. It is not used in the research.
 
-## Results
+### embeddings\text_splitter.py
 
-| Metric        | Baseline | Fine-Tuned |
-|---------------|----------|------------|
-| Accuracy      | 72.5%    | 89.3%      |
-| BLEU Score    | 0.41     | 0.58       |
+This is used nowhere since the context is just passed fully into the prompts. It is meant to split the text into meaningful chunks for the RAG. It is not used in the research.
 
-See `results/` for full evaluation logs and plots.
+### embeddings\vector_store.py
+
+This is code to store document embeddings in a vector database. It is not used in the research.
 
 
 
-## Citation
+## evaluation
 
-If you use this work, please cite:
+This folder contains scripts and model weights for evaluation aftr RL trainig.
+
+### evaluation\model_weights
+
+This folder contains model weights that are the results of the RL training and used for inference in the evaluation.
+
+### evaluation\compare_models.py
+
+This is a script to genearte model answers to prompts from the test set after RL training and then imediately quantitatively evaluate their answers. It store the answers and quantiative evalution in the needed data folder.
+
+## models
+
+These are scripts for loading the models used in the RAG system. They were not used in the research. The huggingface folder contains scripts to load models from huggingface, the ollama folder to load models from ollama.
+
+## reward_training_files
+
+This folder contains the tokenized data and the weights (lora adapters) that result from Reward model training and are used for loading the rewad model for RL trianing.
+
+## rl_training_files
+
+This folder contains checkpoints of the model weights (lora adapaters) that result from RL trainig. Each algorithm has its own folder, the only one used in the research is the one for GRPO.
+
+## rl_training_new
+
+### rl_training_new\wandb
+
+These are the wandb log files for reward model finetuning.
+
+### rl_training_new\accelerate_config.yaml
+
+This is an accelerate config file for RL training. It was not used in the end since the config was set through `accelerate config` in the command prompt whihc overwrites this config file.
+
+### rl_training_new\create_propmt_dataset.py
+
+Script to create the prompt dataset for RL training.
+
+### rl_training_new\data_analysis.ipynb
+
+This is the jupyter notebook for analysing the feedback data and calculating the fleiss kappa in the research.
+
+### rl_training_new\dataset_slits_and_imbalances.ipynb
+
+This is the jupyter notebook for splitting the data for Reward model finetuning and RL training into test, train and eval sets and counting class imbalances in this data.
+
+### rl_training_new\deepspeed_config.json
+
+The deepspeed config file for RL training, used in the accelerate config.
+
+### rl_training_new\finetune_reward_model_basic.ipynb
+
+Jupyter notebook to finetune the reward model for Rl training.
+
+### rl_training_new\GRPO_loop.py
+
+The GRPO training loop used in the RL training in the research. Should be run with accelerate to enable multi-GPU usage.
+
+### rl_training_new\PPO_loop.py
+
+The PPo training loop. Not used in the research, so not fully functional.
+
+### rl_training_new\ppo_trainer_custom.py
+
+The customized TRL PPO_trainer class, not completed since not used in teh research in the end.
+
+### rl_training_new\RL-loop.ipynb
+
+The jupyter notebook as original inspiration for the RL loop files. Not used in the research.
 
 
-@misc{yourname2025mistralfinetune, title={Fine-Tuning Mistral 7B on Domain-Specific Prompts}, author={Fürst, Jacques}, year={2025}, url={https://github.com/yourusername/your-repo} }
+### rl_training_new\utils.py
+
+utils such as the custom reward function, best window function, etc used in reward model finetuning and RL training.
 
 
-## License
+
+
+
+
+
+
+## wandb
+
+These are the wandb logs for the RL training.
+
+
+
+
+
+# License
 
 This project is licensed under the MIT License. See `LICENSE` for details
 
